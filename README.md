@@ -2,9 +2,17 @@
 
 A Clojure based system designed to test people in various forms of knowledge about a course in mechanics for KTH.
 
+
+
 ## Usage
 
 ...write simple set-up a test-system instructions...
+
+(require 'dev)
+(in-ns 'dev)
+(dev/start)
+
+then change in service.clj
 
 ## Development
 Please check out the issues page: https://github.com/claj/mekanikmaskin/issues for scrumboard galore.

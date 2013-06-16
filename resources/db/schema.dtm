@@ -17,9 +17,15 @@
 
 ;;should have a session thingie here (for coop-mode more), but right now a status is sufficient
 {:db/id #db/id[:db.part/db]
-:db/ident :user/session-cookie
+:db/ident :session/cookie
 :db/cardinality :db.cardinality/one
 :db/valueType :db.type/string
-:db/doc "A user's session cookie"
+:db/doc "A session's magic cookie"
+:db.install/_attribute :db.part/db}
+{:db/id #db/id[:db.part/db]
+:db/ident :session/user
+:db/cardinality :db.cardinality/one ;;many + nontrivial logic for a coop-mode!
+:db/valueType :db.type/ref
+:db/doc "Who owns this cookie?"
 :db.install/_attribute :db.part/db}
 ]

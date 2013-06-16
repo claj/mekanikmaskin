@@ -1,11 +1,11 @@
 (ns mekanikmaskin.service
   "pedestal service template
-
 this is where some magic happends (preferably as little as possible)"
     (:require [io.pedestal.service.http :as bootstrap]
               [io.pedestal.service.http.route :as route]
               [io.pedestal.service.http.body-params :as body-params]
               [io.pedestal.service.http.route.definition :refer [defroutes]]
+              [io.pedestal.service.http.ring-middlewares :as middlewares]
               [ring.util.response :as ring-resp]
               [mekanikmaskin.logging :as log]))
 
