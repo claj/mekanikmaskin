@@ -9,6 +9,7 @@ likely set login-state as well"
        mekanikmaskin.utils
        midje.sweet))
 
+;;this could as well be set in datomic!
 
 
 (def students  {"pelle" {:task-at-hand {:exercise "what is 10+10?"

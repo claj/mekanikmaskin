@@ -1,0 +1,25 @@
+[
+;;login profiles
+{:db/id #db/id[:db.part/db]
+:db/ident :user/username
+:db/valueType :db.type/string
+:db/cardinality :db.cardinality/one
+:db/unique :db.unique/value
+:db/doc "A users's username"
+:db.install/_attribute :db.part/db}
+ 
+{:db/id #db/id[:db.part/db]
+:db/ident :user/password
+:db/cardinality :db.cardinality/one
+:db/valueType :db.type/string
+:db/doc "A user's (to be hashed) password"
+:db.install/_attribute :db.part/db}
+
+;;should have a session thingie here (for coop-mode more), but right now a status is sufficient
+{:db/id #db/id[:db.part/db]
+:db/ident :user/session-cookie
+:db/cardinality :db.cardinality/one
+:db/valueType :db.type/string
+:db/doc "A user's session cookie"
+:db.install/_attribute :db.part/db}
+]

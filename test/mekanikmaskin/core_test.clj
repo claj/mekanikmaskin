@@ -32,7 +32,6 @@
 (unfinished assign-new-task)
 
 ;;solve/answer task
-
 (unfinished answer! ..student.. ..ans-id..)
 
 ;;gain knowledge badge
@@ -40,20 +39,16 @@
 
 ;;sign up for new goals
 (unfinished add-goal!)
-
 (unfinished remove-goal!)
 
 ;;group up with someone else (also logged in)
-
 (unfinished team-up-with!)
 (unfinished availiable-to-team-up-with)
 
 ;;buzz togheter about a task
-
 (unfinished start-chat-with)
 
 ;;get statistics over ones progressions
-
 (unfinished statistics-report)
 (future-fact "what happends with the currect task if you head somewhere else? - fail? pause?")
 
@@ -95,7 +90,6 @@
 ;;## administative tasks and events
 
 ;;setup up new environment
-
 (unfinished initialize-db! ..system-configuration..)
 
 ;;run the process
@@ -104,7 +98,6 @@
 (unfinished create-new-db)
 (future-fact "make sure we don't easily overwrite already saved material")
 (unfinished initialize-current-db)
-
 
 ;;start a webserver (port etc)
 (unfinished start-new-webserver)
