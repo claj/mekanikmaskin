@@ -31,7 +31,7 @@ Khan?
 
 ## Domain (sketch)
 
-<img src="https://github.com/claj/mekanikmaskin/blob/master/doc/proto-domain.png"
+<img src="https://raw.github.com/claj/mekanikmaskin/master/doc/proto-domain.png"
  alt="a hand-drawn picture of the domain with user, task, goal, teacher" title="Sketchy domain" align="center" />
 
 
