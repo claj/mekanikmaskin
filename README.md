@@ -16,15 +16,24 @@ for scrumboard galore
 
 ## Similar applications
 
-Anki (flash cards)
+### Flash cards
+[Anki (flash cards)](http://ankisrs.net/)
 
-Vägverkets körkortsprovstest
+Outstanding [Wired article about Super Memo](http://www.wired.com/medtech/health/magazine/16-05/ff_wozniak?currentPage=all)
 
-All online courses
+Wikipedas page about [Spaced Repetiton](http://en.wikipedia.org/wiki/Spaced_repetition)
+
+### Vägverkets körkortsprovstest
+Swedish Driving Licence theory test, 70 questions, of which 5 are test questions, correct answers to at least 52 of 65 theory questions in 50 minutes.
+
+### All online courses
+Khan?
 
 ## Domain (sketch)
 
-![a hand-drawn picture of the domain with user, task, goal, teacher](https://github.com/claj/mekanikmaskin/blob/master/doc/proto-domain.png "Sketchy domain")
+<img src="https://github.com/claj/mekanikmaskin/blob/master/doc/proto-domain.png"
+ alt="a hand-drawn picture of the domain with user, task, goal, teacher" title="Sketchy domain" align="center" />
+
 
 ## Aim
 
