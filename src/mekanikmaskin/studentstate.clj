@@ -4,9 +4,12 @@ adding old events to history
 set the new task-at-hand 
 and correct-answers and wrong-answers
 likely set login-state as well"
- (:use clojure.test))
+ (:use clojure.test
+       mekanikmaskin.task
+       mekanikmaskin.utils
+       midje.sweet))
 
-(defn timestamp! [] (java.util.Date.))
+
 
 (def students  {"pelle" {:task-at-hand {:exercise "what is 10+10?"
                                           :exercise-id "exercise 123"
@@ -93,3 +96,6 @@ likely set login-state as well"
 
 ;; can this really be?
 ;; status would be good - implicit or explicit?
+(unfinished state)
+
+;;how do pedestal handle this?

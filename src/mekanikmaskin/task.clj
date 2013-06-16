@@ -1,13 +1,13 @@
 (ns mekanikmaskin.task)
 
-;;nope nope
+;;Task properties:
 
-;;we have to start with what we really want to do
+;; can be rendered to the user (should contain enough info to be able to be...)
+;; is either equivalent to the task in db or have some internal state vars
+
+
 
 (defn new-task
   "this function should return a suitable (random) task from the user-state"
-  [user-state])
+  [user])
 
-;;how to express a task? four-fields are easy, but if we want...
-
-;; lets start with four-fields...
