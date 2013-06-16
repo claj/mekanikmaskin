@@ -24,7 +24,7 @@ All online courses
 
 ## Domain (sketch)
 
-![a hand-drawn picture of the domain with user, task, goal, teacher](https://github.com/claj/mekanikmaskin/doc/proto-domain.png "Sketchy domain")
+![a hand-drawn picture of the domain with user, task, goal, teacher](https://github.com/claj/mekanikmaskin/blob/master/doc/proto-domain.png "Sketchy domain")
 
 ## Aim
 
