@@ -1,13 +1,17 @@
 (ns mekanikmaskin.service
   "pedestal service template
-this is where some magic happends (preferably as little as possible)"
-    (:require [io.pedestal.service.http :as bootstrap]
-              [io.pedestal.service.http.route :as route]
-              [io.pedestal.service.http.body-params :as body-params]
-              [io.pedestal.service.http.route.definition :refer [defroutes]]
-              [io.pedestal.service.http.ring-middlewares :as middlewares]
-              [ring.util.response :as ring-resp]
-              [mekanikmaskin.logging :as log]))
+this is where some magic happends (preferably as littl as possible)"
+  (:require [io.pedestal.service.interceptor  :refer [definterceptor defhandler]]
+            [io.pedestal.service.http :as bootstrap]
+            [io.pedestal.service.http.route :as route]
+            [io.pedestal.service.http.body-params :as body-params]
+            [io.pedestal.service.http.route.definition :refer [defroutes]]
+            [io.pedestal.service.http.ring-middlewares :as middlewares]
+            [ring.util.response :as ring-resp]
+            
+            [ring.middleware.session.cookie :as cookie]
+            [mekanikmaskin.logging :as log]
+            [mekanikmaskin.dbdev :as db]))
 
 (defn about-page
   [request]
@@ -15,26 +19,26 @@ this is where some magic happends (preferably as little as possible)"
 
 (defn home-page
   [request]
-  (log/info "a homepage visit!")
-  (ring-resp/response "Mekanikmaskinen!"))
+  (ring-resp/response (str  "Mekanikmaskinen! current users: " (db/list-of-users db/conn))))
 
 (defn login-page [request]
-  (log/info "a login-page visit!")
   (ring-resp/response "Log in here!"))
 
 (defn login! [request]
-  (log/info "a login-post attempted")
   (ring-resp/response "login confirmation placeholder"))
 
 (defn exercise [request]
-  (log/info "a request of an exercise")
   (ring-resp/response "placeholder for your new exercise"))
+
+(definterceptor session-interceptor
+  (middlewares/session {:store (cookie/cookie-store)}))
 
 (defroutes routes
   [[["/" {:get home-page}
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
      ["/about" {:get about-page}]
-     ["/login" {:get login-page :post login!}]
+     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
+     
      ["/exercise" {:get exercise}]
      ]]])
 

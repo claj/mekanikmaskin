@@ -11,7 +11,6 @@ likely set login-state as well"
 
 ;;this could as well be set in datomic!
 
-
 (def students  {"pelle" {:task-at-hand {:exercise "what is 10+10?"
                                           :exercise-id "exercise 123"
                                           :continuation {"a" 10 "b" 10}
@@ -30,6 +29,8 @@ likely set login-state as well"
                          :history []}})
 
 (def students-ref (ref students))
+
+;; (promise) for correct answer?
 
 (defn task-at-hand [student-name]
   (get-in  @students-ref [student-name :task-at-hand]))

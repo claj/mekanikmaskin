@@ -1,9 +1,8 @@
 (ns mekanikmaskin.dbdev
   (:use [midje.sweet]
         [ring.middleware.session.store]
+        [mekanikmaskin.config :only [uri]]
         [datomic.api :only (q db) :as d]))
-
-(def uri "datomic:mem://mekanikmaskin")
 
 (defn list-of-users [conn]
   (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
@@ -24,6 +23,8 @@ assert that there are some users availiable"
           conn))
       ;otherwise just connect as usual
       (d/connect uri)))
+
+(q '[:find ?pwdhash :where [?id :user/username "linus"] [?id user/password ?pwdhash]] (db conn))
 
 (def conn (conditional-connect-db uri))
 
