@@ -22,6 +22,10 @@ Vägverkets körkortsprovstest
 
 All online courses
 
+## Domain (sketch)
+
+![a hand-drawn picture of the domain with user, task, goal, teacher](https://github.com/claj/mekanikmaskin/doc/proto-domain.png "Sketchy domain")
+
 ## Aim
 
 the possibility to log in with KTH-ID and click through the tasks until you get it.
