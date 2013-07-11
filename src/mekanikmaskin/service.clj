@@ -7,8 +7,7 @@ this is where some magic happends (preferably as littl as possible)"
             [io.pedestal.service.http.body-params :as body-params]
             [io.pedestal.service.http.route.definition :refer [defroutes]]
             [io.pedestal.service.http.ring-middlewares :as middlewares]
-            [ring.util.response :as ring-resp]
-            
+            [ring.util.response :as ring-resp]            
             [ring.middleware.session.cookie :as cookie]
             [mekanikmaskin.logging :as log]
             [mekanikmaskin.dbdev :as db]))

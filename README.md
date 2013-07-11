@@ -2,8 +2,6 @@
 
 A Clojure based system designed to test people in various forms of knowledge about a course in mechanics for KTH.
 
-
-
 ## Usage
 
 ...write simple set-up a test-system instructions...

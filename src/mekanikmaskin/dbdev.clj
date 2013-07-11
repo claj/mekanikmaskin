@@ -24,8 +24,6 @@ assert that there are some users availiable"
       ;otherwise just connect as usual
       (d/connect uri)))
 
-(q '[:find ?pwdhash :where [?id :user/username "linus"] [?id user/password ?pwdhash]] (db conn))
-
 (def conn (conditional-connect-db uri))
 
 (defn username->id [conn username]
@@ -38,7 +36,7 @@ assert that there are some users availiable"
   [conn username]
   (q '[:find ?id :where [?uid :user/username ?username] [?id :session/user ?uid] :in $ ?username] (db conn) username))
 
-(defn verify-cookie [conn usernamn cookie]
+(defn verify-cookie [conn username cookie]
   (q '[:find ?id :where [?uid :user/username ?username] [?id :session/user ?uid] :in $ ?username] (db conn) username))
 
 (logged-in? conn "kajsa") ;;returns a hashset with an id of the cookie if ok.

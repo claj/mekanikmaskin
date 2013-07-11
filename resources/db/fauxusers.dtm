@@ -1,0 +1,13 @@
+[
+{:db/id #db/id [:db.part/user -1000001], 
+  :user/username "pelle", 
+  :user/password "igloo"}
+
+{:db/id #db/id [:db.part/user -1000002], 
+  :user/username "kajsa", 
+  :user/password "bierstube"}
+
+{:db/id #db/id [:db.part/user -1000003], 
+  :user/username "john", 
+  :user/password "ranch"}
+]
