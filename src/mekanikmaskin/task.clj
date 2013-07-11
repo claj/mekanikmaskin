@@ -35,6 +35,8 @@ the
             :text "100"
             :correct false}]}
 
+;;bindings is not the shit.
+
 (defn task-bindings-gen
   "returns a random task binding
 doesn't work as expected?"
@@ -44,8 +46,8 @@ doesn't work as expected?"
    {:a (+ (rand-int 10) 10)
     :b (+ (rand-int 10) 10)}))
 
-(with-bindings (task-bindings-gen)
-  (str a " , " b))
+;;(with-bindings (task-bindings-gen)
+;;  (str a " , " b))
 
 ;;how to store a macro in a sane way?
 
@@ -109,8 +111,6 @@ doesn't work as expected?"
 (defmethod tr [Keyword :a] [x] "aa!")
 (defmethod tr [Keyword :b] [x] (rand-int 10))
 
-(ns-unmap *ns* 'taskreader)
-
 (tr :a)
 (tr :b)
 
@@ -118,13 +118,6 @@ doesn't work as expected?"
 (taskreader :smallint)
 
 (taskreader :smallint)
-
-(defmulti sokrates (fn [x] [(type x) x])
-(defmethod sokrates [Keyword :hobes ] [x] "hobes")
-(defmethod sokrates [Keyword :kalas] [x] "kalas")
-
-(sokrates :hobes)
-(sokrates :kalas)
 
 ;; seems to be my own reader...
   
@@ -134,15 +127,13 @@ doesn't work as expected?"
 
 ;; the state enough verbose to be useful is
 
-[[:text "what is " [:latex [:var :named-a :smallint] " + " [:var :named-b :smallint]] "?"]
+[[:text "what is " [:latex [:var :named-a :smallint] " + " [:var :named-b :smallint]] "?"]]
 
 ;; how true to mathematical representation should the model be?
 
 ;; this is very similar to html, maybe?
 ;; the latex gets rendered as an image, and should be stored somewhere as such
 ;; the answers should be registrered somewhere for the user
-
-;; 
 
 ;; answers must be dedicated to a certain task
 ;; a task must be dedicated to one certain session

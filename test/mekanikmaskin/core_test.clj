@@ -127,8 +127,7 @@
 ;;handle cheating attempts
 
 (unfinished cheating-alarm!)
-
 ;;report the chi2-results etc
-   ;;future fact!
+;;future fact!
 
 
