@@ -30,29 +30,33 @@ this is where some magic happends (preferably as littl as possible)"
 (defn exercise [request]
   (ring-resp/response (layouting/four-field "what is 2+2?" "1" "2" "3" "4") ))
 
+(defn querybox [req]
+  (ring-resp/response (layouting/textbox-query "what is 2+3?"))
+)
+
+(defn ans [req]
+  (ring-resp/response "str got post"))
+
+
+
 (definterceptor session-interceptor
   (middlewares/session {:store (cookie/cookie-store)}))
 
 (defroutes routes
   [[["/" {:get home-page}
-     ^:interceptors [(body-params/body-params) bootstrap/html-body]
+     ;;for who is this interceptor-thing enabled?:
+     ^:interceptors [(body-params/body-params) bootstrap/html-body] 
      ["/about" {:get about-page}]
      ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
-     ["/exercise" {:get exercise}]]]])
+     ["/exercise" {:get exercise}]
+     ["/qbox" ^:interceptors [middlewares/params] {:get querybox :post ans}]]]])
 
 ;; You can use this fn or a per-request fn via io.pedestal.service.http.route/url-for
 (def url-for (route/url-for-routes routes))
 
 ;; Consumed by mekanik-pedestal-service-test.server/create-server
 (def service {:env :prod
-              ;; You can bring your own non-default interceptors. Make
-              ;; sure you include routing and set it up right for
-              ;; dev-mode. If you do, many other keys for configuring
-              ;; default interceptors will be ignored.
-              ;; :bootstrap/interceptors []
               ::bootstrap/routes routes
-              ;; Root for resource interceptor that is available by default.
               ::bootstrap/resource-path "/public"
-              ;;::bootstrap/host "localhost"
               ::bootstrap/type :jetty
               ::bootstrap/port 8080})
