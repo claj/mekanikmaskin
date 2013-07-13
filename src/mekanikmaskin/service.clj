@@ -10,7 +10,8 @@ this is where some magic happends (preferably as littl as possible)"
             [ring.util.response :as ring-resp]            
             [ring.middleware.session.cookie :as cookie]
             [mekanikmaskin.logging :as log]
-            [mekanikmaskin.dbdev :as db]))
+            [mekanikmaskin.dbdev :as db]
+            [mekanikmaskin.layouting :as layouting]))
 
 (defn about-page
   [request]
@@ -27,7 +28,7 @@ this is where some magic happends (preferably as littl as possible)"
   (ring-resp/response "login confirmation placeholder"))
 
 (defn exercise [request]
-  (ring-resp/response "placeholder for your new exercise"))
+  (ring-resp/response (layouting/four-field "what is 2+2?" "1" "2" "3" "4") ))
 
 (definterceptor session-interceptor
   (middlewares/session {:store (cookie/cookie-store)}))
@@ -37,9 +38,7 @@ this is where some magic happends (preferably as littl as possible)"
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
      ["/about" {:get about-page}]
      ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
-     
-     ["/exercise" {:get exercise}]
-     ]]])
+     ["/exercise" {:get exercise}]]]])
 
 ;; You can use this fn or a per-request fn via io.pedestal.service.http.route/url-for
 (def url-for (route/url-for-routes routes))

@@ -12,12 +12,15 @@
                  [org.slf4j/jul-to-slf4j "1.7.2"]
                  [org.slf4j/jcl-over-slf4j "1.7.2"]
                  [org.slf4j/log4j-over-slf4j "1.7.2"]
-                 
+
                  [com.datomic/datomic-free "0.8.4007" 
                   :exclusions [org.slf4j/slf4j-nop
                                org.slf4j/slf4j-log4j12]]
                  ;;credential encryption
                  [org.jasypt/jasypt "1.9.0"]
+
+                 ;;quick and dirty templates
+                 [hiccup "1.0.3"]
 ] 
   :profiles {:dev {:dependencies [[midje "1.5.1"]]
                    :source-paths ["dev"]}}
