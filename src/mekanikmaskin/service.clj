@@ -15,10 +15,7 @@ takes care of:
         [hiccup.core]
         [datomic.api :only [q db] :as d]
         [ring.middleware.session.store]
-        [clojure.test]
-        [mekanikmaskin.task]
-        [mekanikmaskin.utils]
-        [mekanikmaskin.utils :only [encrypt-password check-password]])
+        [clojure.test])
   (:require [io.pedestal.service.interceptor  :refer [definterceptor defhandler]]
             [io.pedestal.service.http :as bootstrap]
             [io.pedestal.service.http.route :as route]
@@ -28,18 +25,25 @@ takes care of:
             [ring.util.response :as ring-resp]            
             [ring.middleware.session.cookie :as cookie]
             [mekanikmaskin.logging :as log]
-            [mekanikmaskin.layouting :as layouting]
             [clojure.core.async :as async :refer :all]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; database connectivity
-(def uri "datomic:mem://mekanikmaskin")
+(def uri 
+  "In-mem datomic db for dev" 
+  "datomic:mem://mekanikmaskin")
+
+(defn list-of-users
+  "returns a list of the users registrerd"
+  [conn]
+  (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
 
 (defn conditional-connect-db 
   "if there is no database or given :force true
 the database is removed and reinitialized, 
 assert that there are some users availiable"
   [uri &{:keys [force]}]
+  ;;pre: uri should be an OK datomic uri
   {:post [(list-of-users %)]}
   (if (or (d/create-database uri) force)
       (do
@@ -52,19 +56,115 @@ assert that there are some users availiable"
       ;otherwise just connect as usual
       (d/connect uri)))
 
-(def conn (conditional-connect-db uri))
+(def conn (conditional-connect-db uri :force true))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; schema generation
 
+;; see above
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user creation
 (def min-password-length 7)
 
+(defn encrypt-password!
+  "encrypts password to hash"
+  [pwd]
+  {:post [(= (count %) 64)]
+   :pre [(>= (count pwd) min-password-length)]}
+  (.encryptPassword 
+   (StrongPasswordEncryptor.) pwd))
 
+(defn password-ok?
+  "check password against (one of many possible) passwordhash"
+  [pwd pwdhash]
+  (.checkPassword
+   (StrongPasswordEncryptor.) pwd pwdhash))
+
+(defn timestamp! [] (java.util.Date.))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; user login
+;; user login / session handling
+
+;; remeber that sessions is just a :session thingie in the request/response
+;; how does this work in pedestal?
+;; what does it store as sessions key? an UUID?
+;; how is it matched to the browser? through the cookies automatically?
+
+;;about cookies (from middle-ware wrap-cookies
+;; Parses the cookies in the request map, then assocs the resulting map
+;; to the :cookies key on the request.
+
+;; Each cookie is represented as a map, with its value being held in the
+;; :value key. A cookie may optionally contain a :path, :domain or :port
+;; attribute.
+
+;; To set cookies, add a map to the _ :cookies _ key on the response. The values
+;; of the cookie map can either be strings, or maps containing the following
+;; keys:
+
+;; :value - the new value of the cookie
+;; :path - the subpath the cookie is valid for
+;; :domain - the domain the cookie is valid for
+;; :max-age - the maximum age in seconds of the cookie
+;; :expires - a date string at which the cookie will expire
+;; :secure - set to true if the cookie is valid for HTTPS only
+;; :http-only - set to true if the cookie is valid for HTTP only
+
+;; there's a session store:
+;; (ns ring.middleware.session.store
+;;   "Common session store objects and functions.")
+
+;; (defprotocol SessionStore
+;;   (read-session [store key]
+;;     "Read a session map from the store. If the key is not found, an empty map
+;; is returned.")
+;;   (write-session [store key data]
+;;     "Write a session map to the store. Returns the (possibly changed) key under
+;; which the data was stored. If the key is nil, the session is considered
+;; to be new, and a fresh key should be generated.")
+;;   (delete-session [store key]
+;;     "Delete a session map from the store, and returns the session key. If the
+;; returned key is nil, the session cookie will be removed."))
+
+;; This protocol should be implemented by my datomic layer to keep the sessions connected to the users
+;, how was it with the store? is this implicitly given when calling these functions? is it the Datomic db? maybe.
+
+;; this is the inmem storage:
+;; (ns ring.middleware.session.memory
+;;   "In-memory session storage."
+;;   (:use ring.middleware.session.store)
+;;   (:import java.util.UUID))
+;; (deftype MemoryStore [session-map] ->  SessionStore  <-
+;;   (read-session [_ key]
+;;     (@session-map key))
+;;   (write-session [_ key data]
+;;     (let [key (or key (str (UUID/randomUUID)))]
+;;       (swap! session-map assoc key data)
+;;       key))
+;;   (delete-session [_ key]
+;;     (swap! session-map dissoc key)
+;;     nil))
+;; (defn memory-store
+;;   "Creates an in-memory session storage engine."
+;;   ([] (memory-store (atom {})))
+;;   ([session-atom] (MemoryStore. session-atom)))
+
+;; also we have a Cookie store
+
+;; (deftype CookieStore [secret-key]
+;;   SessionStore
+;;   (read-session [_ data]
+;;     (if data (unseal secret-key data)))
+;;   (write-session [_ _ data]
+;;     (seal secret-key data))
+;;   (delete-session [_ _]
+;;     (seal secret-key {})))
+
+;; seal = kvitto, sigill typ
+
+;; so we need the Datomic base layer - to be able to read-session, write-session, delete-session etc
+;; this thingie must be related to the user auth mechanism somehow?
+;; is it so that the session later on get's connected to the users "token"?
 
 (defn logged-in? 
   "is there a cookie for this username in the db?"
@@ -73,11 +173,6 @@ assert that there are some users availiable"
 
 (defn username->id [conn username]
   (ffirst (q '[:find ?id :where [?id :user/username ?username] :in $ ?username] (db conn) username)))
-
-(defn list-of-users
-  "returns a list of the users registrerd"
-  [conn]
-  (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
 
 (defn username->id [conn username]
   (ffirst (q '[:find ?id :where [?id :user/username ?username] :in $ ?username] (db conn) username)))
@@ -183,7 +278,7 @@ assert that there are some users availiable"
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; task history
+;; task history / state
 
 (defn task->history!
   "just want to move the task at hand to history with it's answer added on and "
@@ -206,7 +301,6 @@ assert that there are some users availiable"
 (deftest "task->history"
   (task->history "pelle" "answerid 111111"))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; web templating
 
@@ -222,7 +316,6 @@ assert that there are some users availiable"
      [:div {:style "border: solid; width: 10em;"} answer-2] " "
      [:div {:style "border: solid; width: 10em;"} answer-3] " "
      [:div {:style "border: solid; width: 10em;"} answer-4]]]))
-
 
 (defn textbox-query 
   "query? 
@@ -246,133 +339,11 @@ assert that there are some users availiable"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; web request handling
 
-;; remeber that sessions is just a :session thingie in the request/response
-;; how does this work in pedestal?
-;; what does it store as sessions key? an UUID?
-;; how is it matched to the browser? through the cookies automatically?
-
-;;about cookies (from middle-ware wrap-cookies
-;; Parses the cookies in the request map, then assocs the resulting map
-;; to the :cookies key on the request.
-
-;; Each cookie is represented as a map, with its value being held in the
-;; :value key. A cookie may optionally contain a :path, :domain or :port
-;; attribute.
-
-;; To set cookies, add a map to the _ :cookies _ key on the response. The values
-;; of the cookie map can either be strings, or maps containing the following
-;; keys:
-
-;; :value - the new value of the cookie
-;; :path - the subpath the cookie is valid for
-;; :domain - the domain the cookie is valid for
-;; :max-age - the maximum age in seconds of the cookie
-;; :expires - a date string at which the cookie will expire
-;; :secure - set to true if the cookie is valid for HTTPS only
-;; :http-only - set to true if the cookie is valid for HTTP only
-
-;; there's a session store:
-;; (ns ring.middleware.session.store
-;;   "Common session store objects and functions.")
-
-;; (defprotocol SessionStore
-;;   (read-session [store key]
-;;     "Read a session map from the store. If the key is not found, an empty map
-;; is returned.")
-;;   (write-session [store key data]
-;;     "Write a session map to the store. Returns the (possibly changed) key under
-;; which the data was stored. If the key is nil, the session is considered
-;; to be new, and a fresh key should be generated.")
-;;   (delete-session [store key]
-;;     "Delete a session map from the store, and returns the session key. If the
-;; returned key is nil, the session cookie will be removed."))
-
-;; This protocol should be implemented by my datomic layer to keep the sessions connected to the users
-;, how was it with the store? is this implicitly given when calling these functions? is it the Datomic db? maybe.
-
-;; this is the inmem storage:
-;; (ns ring.middleware.session.memory
-;;   "In-memory session storage."
-;;   (:use ring.middleware.session.store)
-;;   (:import java.util.UUID))
-;; (deftype MemoryStore [session-map] ->  SessionStore  <-
-;;   (read-session [_ key]
-;;     (@session-map key))
-;;   (write-session [_ key data]
-;;     (let [key (or key (str (UUID/randomUUID)))]
-;;       (swap! session-map assoc key data)
-;;       key))
-;;   (delete-session [_ key]
-;;     (swap! session-map dissoc key)
-;;     nil))
-;; (defn memory-store
-;;   "Creates an in-memory session storage engine."
-;;   ([] (memory-store (atom {})))
-;;   ([session-atom] (MemoryStore. session-atom)))
-
-;; also we have a Cookie store
-
-;; (deftype CookieStore [secret-key]
-;;   SessionStore
-;;   (read-session [_ data]
-;;     (if data (unseal secret-key data)))
-;;   (write-session [_ _ data]
-;;     (seal secret-key data))
-;;   (delete-session [_ _]
-;;     (seal secret-key {})))
-
-;; seal = kvitto, sigill typ
-
-;; so we need the Datomic base layer - to be able to read-session, write-session, delete-session etc
-;; this thingie must be related to the user auth mechanism somehow?
-;; is it so that the session later on get's connected to the users "token"?
-
 (def url-for (route/url-for-routes routes))
 
 (defn about-page
   [request]
   (ring-resp/response (about-page)))
-
-(defroutes routes
-  [[["/" {:get home-page}
-     ^:interceptors [(body-params/body-params) bootstrap/html-body] 
-     ["/about" {:get about-page}]
-     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
-     ["/exercise" {:get exercise}]
-     ["/qbox" ^:interceptors [middlewares/params] {:get querybox :post ans}]]]])
-
-
-;;; WASTELAND
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-
-
-;;should have a db function for logging in with session cookies et al
-(unfinished login! ..username.. ..password..)
-
-(unfinished status? ..student..)
-;;answer etc could go to datomic
-;; need to wait for feedback from db before next page is shown though. callback-style
-;;when a result is written, a listener should see that we need to do something new?
-;;try out listener in datomic db
-;;(add-listener 
-;; fut 
-;;  f 
-;; executor)
-;;
-;;Register a completion listener for the future. The listener
-;;will run once and only once, if and when the future's work is
-;;complete. If the future has completed already, the listener will
-;;run immediately.  Ordering of listeners is not guaranteed.
-;;the future comes from (transact/async)
-(defn home-page
-  [request]
-  (ring-resp/response (str  "Mekanikmaskinen! current users: " (list-of-users db/conn))))
-
-(defn login-page [request]
-  (ring-resp/response "Log in here!"))
 
 (defn login! [request]
   (ring-resp/response "login confirmation placeholder"))
@@ -396,7 +367,16 @@ assert that there are some users availiable"
 (definterceptor session-interceptor
   (middlewares/session {:store (cookie/cookie-store)}))
 
+(defroutes routes
+  [[["/" {:get home-page}
+     ^:interceptors [(body-params/body-params) bootstrap/html-body] 
+     ["/about" {:get about-page}]
+     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
+     ["/exercise" {:get exercise}]
+     ["/qbox" ^:interceptors [middlewares/params] {:get querybox :post ans}]]]])
 
+;;; WASTELAND
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def service {:env :prod
               ::bootstrap/routes routes
@@ -408,25 +388,6 @@ assert that there are some users availiable"
   "returns a list of the users registrerd"
   [conn]
   (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
-
-(defn conditional-connect-db 
-  "if there is no database or given :force true
-the database is removed and reinitialized, 
-assert that there are some users availiable"
-  [uri &{:keys [force]}]
-  {:post [(list-of-users %)]}
-  (if (or (d/create-database uri) force)
-      (do
-        (d/delete-database uri)
-        (d/create-database uri)
-        (let [conn (d/connect uri)]
-          @(d/transact conn (read-string (slurp "resources/db/schema.dtm")))
-          @(d/transact conn (read-string (slurp "resources/db/fauxusers.dtm")))
-          conn))
-      ;otherwise just connect as usual
-      (d/connect uri)))
-
-(def conn (conditional-connect-db uri))
 
 (defn username->id [conn username]
   (ffirst (q '[:find ?id :where [?id :user/username ?username] :in $ ?username] (db conn) username)))
@@ -570,7 +531,6 @@ doesn't work as expected?"
 ;;there is the possibility to adress the variables by
 ;;the order
 
-
 ;; the state enough verbose to be useful is
 
 [[:text "what is " [:latex [:var :named-a :smallint] " + " [:var :named-b :smallint]] "?"]]
@@ -586,7 +546,6 @@ doesn't work as expected?"
 ;;the task coupled to a session is changing over time. maybe it's just an update of a certain position in a session datom?
 
 ;;or the sessions are actually differed - many persons can work on one task at a certain time. if they are working togheter - a session could therefore be a "work" as well.
-
 
 (defn user-exists?
   "returns the hash-set of the user"
@@ -623,93 +582,6 @@ doesn't work as expected?"
 (defn remove-user! [username]
   ;;retract in a transaction
 )
- 
-
-(defn timestamp! [] (java.util.Date.))
-
-(defn encrypt-password 
-  "encrypts password to hash"
-  [pwd]
-  {:post [(= (count %) 64)]
-   :pre [(>= (count pwd) min-password-length)]}
-  (.encryptPassword 
-   (StrongPasswordEncryptor.) pwd))
-
-(defn check-password 
-  "check password against (one of many possible) passwordhash"
-  [pwd pwdhash]
-  (.checkPassword
-   (StrongPasswordEncryptor.) pwd pwdhash))
-
-
-
-
-(def students  {"pelle" {:task-at-hand {:exercise "what is 10+10?"
-                                          :exercise-id "exercise 123"
-                                          :continuation {"a" 10 "b" 10}
-                                          :answers [{:id "answerid 222221"
-                                                     :text "20"
-                                                     :correct true}
-                                                    {:id "answerid 222222"
-                                                     :text "0"
-                                                     :correct false}
-                                                    {:id "answerid 222223"
-                                                     :text "12"
-                                                     :correct false}
-                                                    {:id "answerid 222224"
-                                                     :text "100"
-                                                     :correct false}]}
-                         :history []}})
-
-;; this is super complicated! gah.
-(def students-ref (ref students))
-;; (promise) for correct answer?
-
-;; async instead?
-(defn task-at-hand [student-name]
-  (get-in  @students-ref [student-name :task-at-hand]))
-
-(deftest task-at-hand-test
-  (is
-   (= 
-    (vec (keys (task-at-hand "pelle"))) 
-    [:continuation :exercise-id :exercise :answers])))
-
-
-
-(defn valid-answer? 
-  "constructs a set of all the ids and see if answer-id is in it"
-  [answers answer-id]
-  (not (nil? ((set (map :id answers)) answer-id))))
-
-(deftest test-valid-answer?
-  (is (valid-answer? [{:id 1}] 1))
-  (is (not (valid-answer? [{:id 1} {:id 2}] 3))))
-
-(defn correct-answer? 
-  "selects the answer-id in the answers and checks it's correctness"
-  [answers answer-id]
-  (:correct (first (filter #(= (:id %) answer-id) answers))))
-
-;;this shuld access task as everything else
-(deftest correct-answer?
-  "unvalid answers checked before"
-  (let [answers       [{:id "ans 1" :correct true}]
-        correct-reply "ans 1"
-        wrong-reply   "ans 2"]
-    (is (correct-answer? answers correct-reply))
-    (is (not (correct-answer? answers wrong-reply)))))
-                                       
-
-
-(defn answer! 
-  "attempts to answer a given exercise from incoming request somehow"
-  [student answer-id])
-
-
-(deftest "task->history"
-  (task->history "pelle" "answerid 111111"))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Async things.

@@ -15,17 +15,73 @@
 :db/doc "A user's (to be hashed) password"
 :db.install/_attribute :db.part/db}
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;should have a session thingie here (for coop-mode more), but right now a status is sufficient
+
 {:db/id #db/id[:db.part/db]
 :db/ident :session/cookie
 :db/cardinality :db.cardinality/one
 :db/valueType :db.type/string
 :db/doc "A session's magic cookie"
 :db.install/_attribute :db.part/db}
+
 {:db/id #db/id[:db.part/db]
 :db/ident :session/user
-:db/cardinality :db.cardinality/one ;;many + nontrivial logic for a coop-mode!
+
+;;many + nontrivial logic for a coop-mode!:
+:db/cardinality :db.cardinality/one 
+
 :db/valueType :db.type/ref
 :db/doc "Who owns this cookie?"
 :db.install/_attribute :db.part/db}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; answer
+
+{:db/id #db/id[:db.part/db]
+:db/ident :answer/correct
+:db/cardinality :db.cardinality/one
+:db/valueType :db.type/boolean
+:db/doc "was the answer correct?"
+:db.install/_attribute :db.part/db}
+
+{:db/id #db/id[:db.part/db]
+:db/ident :answer/user
+:db/cardinality :db.cardinality/one
+:db/valueType :db.type/ref
+:db/doc "which user answered?"
+:db.install/_attribute :db.part/db}
+
+{:db/id #db/id[:db.part/db]
+:db/ident :answer/task
+:db/cardinality :db.cardinality/one
+:db/valueType :db.type/ref
+:db/doc "which task was answered?"
+:db.install/_attribute :db.part/db}
+
+{:db/id #db/id[:db.part/db]
+:db/ident :answer/timestamp
+:db/cardinality :db.cardinality/one
+:db/valueType :db.type/instant
+:db/doc "when was it answered?"
+:db.install/_attribute :db.part/db}
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Task
+
+{:db/id #db/id[:db.part/db]
+:db/ident :task/query
+:db/cardinality :db.cardinality/one
+:db/valueType :db.type/string
+:db/doc "query of the task"
+:db.install/_attribute :db.part/db}
+
+{:db/id #db/id[:db.part/db]
+:db/ident :task/answer
+:db/cardinality :db.cardinality/one
+:db/valueType :db.type/string
+:db/doc "correct answer of the task"
+:db.install/_attribute :db.part/db}
+
+
 ]

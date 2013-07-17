@@ -10,4 +10,13 @@
 {:db/id #db/id [:db.part/user -1000003], 
   :user/username "john", 
   :user/password "ranch"}
+
+
+{:db/id #db/id [:db.part/user]
+:task/query "what is 2+2"
+:task/answer "4"}
+
+{:db/id #db/id [:db.part/user]
+:task/query "what is 2+6"
+:task/answer "8"}
 ]
