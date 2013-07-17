@@ -1,22 +1,30 @@
 [
-{:db/id #db/id [:db.part/user -1000001], 
+;; three faux users, pelle, kajsa, john
+;; should create true passwords for them with the encrypting lib
+ {:db/id #db/id [:db.part/user -1000001], 
   :user/username "pelle", 
-  :user/password "igloo"}
-
-{:db/id #db/id [:db.part/user -1000002], 
+  :user/password "0Cerk6cDEgRJOB3XbCqPQfxOnjnIckg4OyRvrfPCxnGNkniB2CWx1wu5XKZsifus"} ;;igloo123
+ 
+ {:db/id #db/id [:db.part/user -1000002], 
   :user/username "kajsa", 
-  :user/password "bierstube"}
-
-{:db/id #db/id [:db.part/user -1000003], 
+  :user/password "e4KnoWsEgSWozFo8qTENsZoOxhMpRcg2kkCYT9sX6Wg7SF5aB9O23n7p0lOIe0FV" }
+ ;;"bierstube" 
+ {:db/id #db/id [:db.part/user -1000003], 
   :user/username "john", 
-  :user/password "ranch"}
+  :user/password "LcC+94AHKnWSD+g0nCvjAXm6NRRW5Y46vrm3g6i4jGqtz7GtVC40W2QCCbNdC0uo" 
+} ;;"ranch123"
 
-
-{:db/id #db/id [:db.part/user]
-:task/query "what is 2+2"
-:task/answer "4"}
-
-{:db/id #db/id [:db.part/user]
-:task/query "what is 2+6"
-:task/answer "8"}
-]
+ {:db/id #db/id [:db.part/user -1000004]
+  :task/query "what is 2+2"
+  :task/answer "4"}
+ 
+ {:db/id #db/id [:db.part/user -1000005]
+  :task/query "what is 2+6"
+  :task/answer "8"}
+ 
+ {:db/id #db/id [:db.part/user -1000007]
+  :answer/user #db/id [:db.part/user -1000001] ;;pelle has answered
+  :answer/task #db/id [:db.part/user -1000004] ;;on 2+2
+  :answer/correct true                  ;;and he answered correctly
+  :answer/timestamp #inst "2013-07-17T19:00:00.00-00:00" ;;at wed 17 jul 19:00
+  }]
