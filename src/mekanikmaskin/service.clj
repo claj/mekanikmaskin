@@ -8,14 +8,17 @@ takes care of:
 - handle user creation
 - handle user logins by pedestal/ring sessions
 - persisting results
-- facilitate user interaction"
+- facilitate user interaction
+
+how to store tasks of various types in datomic? by the ref - it's untyped and we can have a
+protocol or whatever in the other end showing the task correctly"
   (:import [clojure.lang Keyword]
            [org.jasypt.util.password StrongPasswordEncryptor])
   (:use [midje.sweet]
+        [clojure.test]
         [hiccup.core]
         [datomic.api :only [q db] :as d]
-        [ring.middleware.session.store]
-        [clojure.test])
+        [ring.middleware.session.store])
   (:require [io.pedestal.service.interceptor  :refer [definterceptor defhandler]]
             [io.pedestal.service.http :as bootstrap]
             [io.pedestal.service.http.route :as route]
@@ -26,6 +29,38 @@ takes care of:
             [ring.middleware.session.cookie :as cookie]
             [mekanikmaskin.logging :as log]
             [clojure.core.async :as async :refer :all]))
+
+;; http://clojuredocs.org/clojure_core/1.2.0/clojure.core/test
+;; (defn my-function
+;; 	  "this function adds two numbers"
+;; 	  {:test #(do
+;; 	            (assert (= (my-function 2 3) 5))
+;; 	            (assert (= (my-function 4 4) 8)))}
+;; 	  ([x y] (+ x y)))
+;; 	 
+;; 	(test #'my-function)  ;equal to (test (var my-function))
+;; 	=> :ok
+;; 	 
+;; 	(defn my-function
+;; 	  "this function adds two numbers"
+;; 	  {:test #(do
+;; 	            (assert (= (my-function 2 3) 5))
+;; 	            (assert (= (my-function 99 4) 8)))}
+;; 	  ([x y] (+ x y)))
+;; 	 
+;; 20	(test #'my-function)
+;; 21	=> java.lang.AssertionError: Assert failed: (= (my-function 99 4) 8) (NO_SOURCE_FILE:0
+;; 22	 
+;; 23	---------------------------------------------------------------------------
+;; 24	 
+;; 25	(defn my-function
+;; 26	  "this function adds two numbers"
+;; 27	  ([x y] (+ x y)))
+;; 28	 
+;; 29	(test #'my-function)
+;; 30	=> :no-test
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; database connectivity
@@ -61,7 +96,7 @@ assert that there are some users availiable"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; schema generation
 
-;; see above
+;; see above and ./resources/db/schema.dtm
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user creation
@@ -78,6 +113,8 @@ assert that there are some users availiable"
 (defn password-ok?
   "check password against (one of many possible) passwordhash"
   [pwd pwdhash]
+  {:pre [(= (count pwdhash) 64) 
+         (>= (count pwd) min-password-length)]}
   (.checkPassword
    (StrongPasswordEncryptor.) pwd pwdhash))
 
@@ -134,6 +171,7 @@ assert that there are some users availiable"
 ;;   "In-memory session storage."
 ;;   (:use ring.middleware.session.store)
 ;;   (:import java.util.UUID))
+
 ;; (deftype MemoryStore [session-map] ->  SessionStore  <-
 ;;   (read-session [_ key]
 ;;     (@session-map key))
@@ -160,6 +198,20 @@ assert that there are some users availiable"
 ;;   (delete-session [_ _]
 ;;     (seal secret-key {})))
 
+;;the protocol is like this:
+;;
+;; (defprotocol SessionStore
+;;   (read-session [store key]
+;;     "Read a session map from the store. If the key is not found, an empty map
+;; is returned.")
+;;   (write-session [store key data]
+;;     "Write a session map to the store. Returns the (possibly changed) key under
+;; which the data was stored. If the key is nil, the session is considered
+;; to be new, and a fresh key should be generated.")
+;;   (delete-session [store key]
+;;     "Delete a session map from the store, and returns the session key. If the
+;; returned key is nil, the session cookie will be removed."))
+
 ;; seal = kvitto, sigill typ
 
 ;; so we need the Datomic base layer - to be able to read-session, write-session, delete-session etc
@@ -179,14 +231,31 @@ assert that there are some users availiable"
 
 (fact (username->id conn "kajsa") =not=> nil)
 
-(defn verify-cookie [conn username cookie]
+(defn verify-session [conn username cookie]
   (q '[:find ?id :where [?uid :user/username ?username] [?id :session/user ?uid] :in $ ?username] (db conn) username))
 
 (logged-in? conn "kajsa") ;;returns a hashset with an id of the cookie if ok.
+;;=> {}
+
+
+(deftype DatomicStore [uuid]
+  SessionStore
+  (read-session [uuid data]
+    nil ;; query for datomic session here
+    ;;what is data here?
+    )
+  (write-session [uuid _ data]
+    nil
+    ;;transact session datom here
+    )
+  (delete-session [uuid _]
+    nil
+    ;;retract session datom here
+    ))
+
 
 (defn add-cookie!
-  "ah, how do ask a certain db what happends?, like get datom xxx out of this db...
-"
+  "ah, how do ask a certain db what happends?, like get datom xxx out of this db..."
   [conn username cookie]
   {:post [(logged-in? conn username)]}
   @(d/transact conn [{:db/id (d/tempid :db.part/user)
@@ -240,8 +309,6 @@ assert that there are some users availiable"
             :text "100"
             :correct false}]}
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; answering
 
@@ -273,6 +340,100 @@ assert that there are some users availiable"
   "attempts to answer a given exercise from incoming request somehow"
   [student answer-id])
 
+(defprotocol Task
+  (generate [this options]
+    "generate a task given a map options")
+  (correct? [this answer]
+    "answers 'is the given answer correct for this task?'")
+  
+
+)
+
+;;a task can be
+;; selected
+;;wrongly answered
+;; correctly answered
+;; attempted to be cheated with
+;; rendered.
+
+
+;; dummy version of a task just to see how gorgeous it is to have automatic rendering of 'em
+(defprotocol TaskRender 
+  (to-html [task] "generates an html version of the task")
+  (to-text [task] "genereates a string version of the task"))
+
+;; textbox-query:
+{
+ :query "what is 2+2?"
+ :exercise-id "exercise 1245"
+ :answer "4"}
+
+;; fourfield-query:
+
+{:query "what is 10+10?"
+ :exercise-id "exercise 123"
+ :continuation {"a" 10 "b" 10}
+ :answers [{:id "answerid 222221"
+            :text "20"
+            :correct true}
+           {:id "answerid 222222"
+            :text "0"
+            :correct false}
+           {:id "answerid 222223"
+            :text "12"
+            :correct false}
+           {:id "answerid 222224"
+            :text "100"
+            :correct false}]}
+
+(defprotocol RenderT
+		(to-text [this])
+		(to-html [this]))
+
+(deftype FourFieldT [a b]
+		RenderT
+		(to-text [task] (str "what is " a " + " b "?"))
+		(to-html [task] (str "<h1>what is " a " + " b "?</h1>")))
+
+(defn textbox-query-to-html
+  "query? 
+   [_answer__] [OK]"
+  [query]
+  (html [:html
+         [:head [:title "textbox-query"]]
+         [:body 
+          [:h2 query]
+          [:form { :action "/qbox" :method "POST"}
+           [:input {:type "textbox" :name "value"}]
+           [:input {:type "submit" }]]]]))
+
+
+(defn textbox-query-to-tex [query]
+  (str (:query query)))
+
+(defn four-field-query-to-html
+  "extemely quick and dirty four field layouting function"
+  [query answer-1 answer-2 answer-3 answer-4]
+  (html 
+   [:html 
+    [:head [:title "four field"]]
+    [:body
+     [:h2 query]
+     [:div {:style "border: solid; width: 10em;"} answer-1] " " 
+     [:div {:style "border: solid; width: 10em;"} answer-2] " "
+     [:div {:style "border: solid; width: 10em;"} answer-3] " "
+     [:div {:style "border: solid; width: 10em;"} answer-4]]]))
+
+
+
+(deftype FourField [task] Task TaskRender
+;;         (generate [task options]) this should be in a factory or something instead!
+         (correct? [task answer])
+
+         (to-html [task]
+          
+)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; score aggregation
 
@@ -303,32 +464,6 @@ assert that there are some users availiable"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; web templating
-
-(defn four-field 
-  "extemely quick and dirty four field layouting function"
-  [query answer-1 answer-2 answer-3 answer-4]
-  (html 
-   [:html 
-    [:head [:title "four field"]]
-    [:body
-     [:h2 query]
-     [:div {:style "border: solid; width: 10em;"} answer-1] " " 
-     [:div {:style "border: solid; width: 10em;"} answer-2] " "
-     [:div {:style "border: solid; width: 10em;"} answer-3] " "
-     [:div {:style "border: solid; width: 10em;"} answer-4]]]))
-
-(defn textbox-query 
-  "query? 
-   [_answer__] [OK]"
-;; leads to :form-params {"hej" "234"}
-  [query]
-  (html [:html
-         [:head [:title "textbox-query"]]
-         [:body 
-          [:h2 query]
-          [:form { :action "/qbox" :method "POST"}
-           [:input {:type "textbox" :name "value"}]
-           [:input {:type "submit" }]]]]))
 
 (defn about-page []
   (html [:html [:head [:title "About mekanikmaskinen"]]
@@ -427,22 +562,6 @@ the "
 (defn new-task
   "this function should return a suitable (random) task from the user-state"
   [user])
-
-{:exercise "what is 10+10?"
- :exercise-id "exercise 123"
- :continuation {"a" 10 "b" 10}
- :answers [{:id "answerid 222221"
-            :text "20"
-            :correct true}
-           {:id "answerid 222222"
-            :text "0"
-            :correct false}
-           {:id "answerid 222223"
-            :text "12"
-            :correct false}
-           {:id "answerid 222224"
-            :text "100"
-            :correct false}]}
 
 ;;bindings is not the shit.
 
