@@ -11,7 +11,26 @@ takes care of:
 - facilitate user interaction
 
 how to store tasks of various types in datomic? by the ref - it's untyped and we can have a
-protocol or whatever in the other end showing the task correctly"
+protocol or whatever in the other end showing the task correctly
+
+
+   A student logs in
+   and
+   gets the first task
+   answers this task
+   right: one way
+   wrong: another way
+
+   until all concepts are found to be mastered by the student
+
+   now we can be sure the student knows enough to finish the course.
+
+four different heuristics:
+ - list of ''good next task'' - recommendations.
+ - concept navigation
+ - failrate (accumulated thorugh users / NN for various neighbours)
+ - flowrate / we want you in flow / time derivative?
+"
   (:import [clojure.lang Keyword]
            [org.jasypt.util.password StrongPasswordEncryptor])
   (:use [midje.sweet]
@@ -30,48 +49,45 @@ protocol or whatever in the other end showing the task correctly"
             [mekanikmaskin.logging :as log]
             [clojure.core.async :as async :refer :all]))
 
+;; test in the function definition: greatz
+
 ;; http://clojuredocs.org/clojure_core/1.2.0/clojure.core/test
-;; (defn my-function
-;; 	  "this function adds two numbers"
-;; 	  {:test #(do
-;; 	            (assert (= (my-function 2 3) 5))
-;; 	            (assert (= (my-function 4 4) 8)))}
-;; 	  ([x y] (+ x y)))
+;;(defn my-function
+;;"this function adds two numbers"
+;;  {:test #(do
+;;         (assert (= (my-function 2 3) 5))
+;;         (assert (= (my-function 4 4) 8)))}
+;; ([x y] (+ x y)))
 ;; 	 
-;; 	(test #'my-function)  ;equal to (test (var my-function))
-;; 	=> :ok
+;;(test #'my-function)  ;equal to (test (var my-function))
+;;=> :ok
 ;; 	 
-;; 	(defn my-function
-;; 	  "this function adds two numbers"
-;; 	  {:test #(do
-;; 	            (assert (= (my-function 2 3) 5))
-;; 	            (assert (= (my-function 99 4) 8)))}
-;; 	  ([x y] (+ x y)))
+;;(defn my-function
+;;"this function adds two numbers"
+;;{:test #(do
+;;           (assert (= (my-function 2 3) 5))
+;;           (assert (= (my-function 99 4) 8)))}
+;;  ([x y] (+ x y)))
 ;; 	 
-;; 20	(test #'my-function)
-;; 21	=> java.lang.AssertionError: Assert failed: (= (my-function 99 4) 8) (NO_SOURCE_FILE:0
-;; 22	 
-;; 23	---------------------------------------------------------------------------
-;; 24	 
-;; 25	(defn my-function
-;; 26	  "this function adds two numbers"
-;; 27	  ([x y] (+ x y)))
-;; 28	 
-;; 29	(test #'my-function)
-;; 30	=> :no-test
+;;(test #'my-function)
+;; 	=> java.lang.AssertionError: Assert failed: (= (my-function 99 4) 8) (NO_SOURCE_FILE:0
 
-
+;;(defn my-function
+;;"this function adds two numbers"
+;;([x y] (+ x y)))
+;; 	 
+;;(test #'my-function)
+;;=> :no-test
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; database connectivity
+;; database connectivity, initialization
+
+;; see schema in ./resources/db/schema.dtm
 (def uri 
   "In-mem datomic db for dev" 
   "datomic:mem://mekanikmaskin")
 
-(defn list-of-users
-  "returns a list of the users registrerd"
-  [conn]
-  (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
+(declare list-of-users)
 
 (defn conditional-connect-db 
   "if there is no database or given :force true
@@ -94,29 +110,72 @@ assert that there are some users availiable"
 (def conn (conditional-connect-db uri :force true))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; schema generation
+;; User
+;; a user can
+;; be created
+;; be deleted
+;; change password
 
-;; see above and ./resources/db/schema.dtm
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; user creation
 (def min-password-length 7)
 
 (defn encrypt-password!
-  "encrypts password to hash"
-  [pwd]
-  {:post [(= (count %) 64)]
-   :pre [(>= (count pwd) min-password-length)]}
+  "encrypts password to hash, the jasypt StrongPasswordEncryptor hash is not giving the same hash for the same password (for security reasons), therefore the ! in the name"
+  [^String pwd]
+  {:post [(= (count %) 64)] ;;the jasypt returns the password hash value as an encoded string
+   :pre [(>= (count pwd) min-password-length)]} ;;the password must be of sufficent length
   (.encryptPassword 
    (StrongPasswordEncryptor.) pwd))
 
 (defn password-ok?
   "check password against (one of many possible) passwordhash"
-  [pwd pwdhash]
+  [^String pwd ^String pwdhash]
   {:pre [(= (count pwdhash) 64) 
          (>= (count pwd) min-password-length)]}
   (.checkPassword
    (StrongPasswordEncryptor.) pwd pwdhash))
+
+(defn user-exists?
+  "returns the hash-set of the user"
+  [^String username]
+  {:post [(<= (count %) 1)]}
+  (let [conn (d/connect uri)]
+    (q '[:find ?id 
+         :where [?id :user/username ?username] 
+         :in ?username, $] 
+       username (db conn))))
+
+(defn registrer-user! [username pwd pwd2]
+  {:pre [(= pwd pwd2), (empty? (user-exists? username))]
+   :post [(user-exists? username)]}
+  (let [conn (d/connect uri)]
+    @(d/transact conn [{:db/id (d/tempid :db.part/user)
+                        :user/username username
+                        :user/password (encrypt-password! pwd)}])))
+
+(defn valid-credentials? [username pwd]
+  {:pre [user-exists? username]}
+   (let [conn (d/connect uri)
+         pwdhash (ffirst (q '[:find ?pwdhash :where 
+                              [?id :user/username ?username]
+                              [?id :user/password ?pwdhash]
+                              :in ?username $]
+                            username (db conn)))]
+           (password-ok? pwd pwdhash)))
+
+(registrer-user! "linus" "hahahaha" "hahahaha")
+(valid-credentials? "linus" "hahahaha")
+(valid-credentials? "amundsen" "polarisar")
+
+(defn remove-user! [username]
+  ;;retract in a transaction
+)
+
+(defn list-of-users
+  "returns a list of the users registrerd"
+  [^datomic.peer.LocalConnection conn]
+  {:post [(= (type %) java.util.HashSet) (not (zero? (count %)))]}
+  (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
 
 (defn timestamp! [] (java.util.Date.))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -226,6 +285,8 @@ assert that there are some users availiable"
 (defn username->id [conn username]
   (ffirst (q '[:find ?id :where [?id :user/username ?username] :in $ ?username] (db conn) username)))
 
+;;are these really nesc?
+
 (defn username->id [conn username]
   (ffirst (q '[:find ?id :where [?id :user/username ?username] :in $ ?username] (db conn) username)))
 
@@ -253,6 +314,24 @@ assert that there are some users availiable"
     ;;retract session datom here
     ))
 
+
+;; [:db/retract entity-id attribute value]
+;; [data-fn args*]
+
+;; Each map a transaction contains is equivalent to a set of one or more :db/add operations. The map must include a :db/id key identifying the entity data is being added to (as described below). It may include any number of attribute, value pairs.
+
+;; {:db/id entity-id
+;;  attribute value
+;;  attribute value
+;;  ... }
+
+;; Internally, the map structure gets transformed to the list structure. Each attribute, value pair becomes a :db/add list using the entity-id value associated with the :db/id key.
+
+;; [:db/add entity-id attribute value]
+;; [:db/add entity-id attribute value]
+;; ...
+
+;; The map structure is supported as a convenience when adding data. As a further convenience, the attribute keys in the map may be either keywords or strings. 
 
 (defn add-cookie!
   "ah, how do ask a certain db what happends?, like get datom xxx out of this db..."
@@ -344,18 +423,11 @@ assert that there are some users availiable"
   (generate [this options]
     "generate a task given a map options")
   (correct? [this answer]
-    "answers 'is the given answer correct for this task?'")
-  
+    "answers 'is the given answer correct for this task?'"))
 
-)
 
-;;a task can be
-;; selected
-;;wrongly answered
-;; correctly answered
-;; attempted to be cheated with
-;; rendered.
-
+;; a task can be
+;;    rendered.
 
 ;; dummy version of a task just to see how gorgeous it is to have automatic rendering of 'em
 (defprotocol TaskRender 
@@ -424,18 +496,17 @@ assert that there are some users availiable"
      [:div {:style "border: solid; width: 10em;"} answer-3] " "
      [:div {:style "border: solid; width: 10em;"} answer-4]]]))
 
-
-
 (deftype FourField [task] Task TaskRender
 ;;         (generate [task options]) this should be in a factory or something instead!
          (correct? [task answer])
-
-         (to-html [task]
-          
-)
+         (to-html [task])Ä)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; score aggregation
+;; score aggregation / select new task
+
+;; given that the user has solved task1, task2 is suitable.
+;; or searching towards a certain goal?
+;; some A* thing.
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -519,29 +590,8 @@ assert that there are some users availiable"
               ::bootstrap/type :jetty
               ::bootstrap/port 8080})
 
-(defn list-of-users
-  "returns a list of the users registrerd"
-  [conn]
-  (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
-
-(defn username->id [conn username]
-  (ffirst (q '[:find ?id :where [?id :user/username ?username] :in $ ?username] (db conn) username)))
-
-(fact (username->id conn "kajsa") =not=> nil)
-
-(defn logged-in? 
-  "is there a cookie for this username in the db?"
-  [conn username]
-  (q '[:find ?id :where [?uid :user/username ?username] [?id :session/user ?uid] :in $ ?username] (db conn) username))
-
-(defn verify-cookie [conn username cookie]
-  (q '[:find ?id :where [?uid :user/username ?username] [?id :session/user ?uid] :in $ ?username] (db conn) username))
-
-(logged-in? conn "kajsa") ;;returns a hashset with an id of the cookie if ok.
-
 (defn add-cookie!
-  "ah, how do ask a certain db what happends?, like get datom xxx out of this db...
-"
+  "ah, how do ask a certain db what happends?, like get datom xxx out of this db..."
   [conn username cookie]
   {:post [(logged-in? conn username)]}
   @(d/transact conn [{:db/id (d/tempid :db.part/user)
@@ -549,38 +599,16 @@ assert that there are some users availiable"
                     :session/user (d/tempid :db.part/user (username->id conn username))}]))
 
 
-"task is the various exercises to be solved by students, 
-hopefully to learn something
-about the course(s) at hand
-the individual task can only be solved once.
-the "
+;;"task is the various exercises to be solved by students, 
+;;hopefully to learn something
+;;about the course(s) at hand
+;;the individual task can only be solved once.
+;;the "
 
 ;;Task properties:
 ;; can be rendered to the user (should contain enough info to be able to be...)
 ;; is either equivalent to the task in db or have some internal state vars
 
-(defn new-task
-  "this function should return a suitable (random) task from the user-state"
-  [user])
-
-;;bindings is not the shit.
-
-(defn task-bindings-gen
-  "returns a random task binding
-doesn't work as expected?"
- []
- {:post [(map? %), (number? (:a %)), (number? (:b %))]}
-  (io!
-   {:a (+ (rand-int 10) 10)
-    :b (+ (rand-int 10) 10)}))
-
-;;(with-bindings (task-bindings-gen)
-;;  (str a " , " b))
-
-;;how to store a macro in a sane way?
-
-(let [things {:a 1 :b 2}]
-  (str (:a things) ", " (:b things)))
 
 ;; want to persist state like this:
 
@@ -594,113 +622,9 @@ doesn't work as expected?"
   {:exercise (str "what's " a " + " b "?")
    :answers [[:correct true :val (+ a b)]
              [:correct false :val (- a b)]
-             [:correct false :val 0]
+             [:correct false :val 0] ;;but this is not nesc false!
              [:correct false :val (- b a)]]})
 
-;;how to get the typing right?
-
-(defn gen-task3 [{:keys [a b c]}]
-  {:exercise (format "what's %d+%d+%d?" a b c)})
-(gen-task3 {:a 1 :b 2 :c 3})
-
-(def fmt ["what's " :smallint :plus :smallint :plus :smallint "?"])
-
-(apply str fmt)
-
-(defn task-reader [task]
-  (cond
-    (string? task) task
-    (keyword? task) (condp = task
-                      :smallint 1
-                      :plus \+
-                      :minus \-
-                      :largeint 20)))
-
-(apply str (map task-reader fmt))
-
-;;now: want to apply a state-storage for each :smallint etc
-    
-
-(defmulti taskreader (fn [x] [(type x) x]))
-
-(defn dispatch [x] [(type x) x])
-
-(defmethod taskreader [Keyword :smallint] [a]
-  (let [x 1]
-      {:string (str x) 
-       :state x}))
-
-(defmethod taskreader [Keyword :a] [a]
- "a")
-(taskreader :a)
-(taskreader :smallint)
-
-(defmulti tr dispatch)
-(defmethod tr [Keyword :a] [x] "aa!")
-(defmethod tr [Keyword :b] [x] (rand-int 10))
-
-(tr :a)
-(tr :b)
-
-(taskreader :smallint)
-(taskreader :smallint)
-
-;; seems to be my own reader...
-  
-;;there is the possibility to adress the variables by
-;;the order
-
-;; the state enough verbose to be useful is
-
-[[:text "what is " [:latex [:var :named-a :smallint] " + " [:var :named-b :smallint]] "?"]]
-
-;; how true to mathematical representation should the model be?
-
-;; this is very similar to html, maybe?
-;; the latex gets rendered as an image, and should be stored somewhere as such
-;; the answers should be registrered somewhere for the user
-
-;; answers must be dedicated to a certain task
-;; a task must be dedicated to one certain session
-;;the task coupled to a session is changing over time. maybe it's just an update of a certain position in a session datom?
-
-;;or the sessions are actually differed - many persons can work on one task at a certain time. if they are working togheter - a session could therefore be a "work" as well.
-
-(defn user-exists?
-  "returns the hash-set of the user"
-  [username]
-  {:post [(<= (count %) 1)]}
-  (let [conn (d/connect uri)]
-    (q '[:find ?id 
-         :where [?id :user/username ?username] 
-         :in ?username, $] 
-       username (db conn))))
-
-(defn registrer-user! [username pwd pwd2]
-  {:pre [(= pwd pwd2), (empty? (user-exists? username))]
-   :post [(user-exists? username)]}
-  (let [conn (d/connect uri)]
-    @(d/transact conn [{:db/id (d/tempid :db.part/user)
-                        :user/username username
-                        :user/password (encrypt-password pwd)}])))
-
-(defn valid-credentials? [username pwd]
-  {:pre [user-exists? username]}
-   (let [conn (d/connect uri)
-         pwdhash (ffirst (q '[:find ?pwdhash :where 
-                              [?id :user/username ?username]
-                              [?id :user/password ?pwdhash]
-                              :in ?username $]
-                            username (db conn)))]
-           (check-password pwd pwdhash)))
-
-(registrer-user! "linus" "hahahaha" "hahahaha")
-(valid-credentials? "linus" "hahahaha")
-(valid-credentials? "amundsen" "polarisar")          
-
-(defn remove-user! [username]
-  ;;retract in a transaction
-)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Async things.
