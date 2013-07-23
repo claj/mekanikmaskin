@@ -1,0 +1,40 @@
+* app
+** show some concept questions
+
+concept questions mechanics
+
+http://www.arborsci.com/60-questions-physics-students-should-know
+
+56. When a uranium nucleus undergoes fission, the energy released is primarily in the form of
+A. gamma radiation. 
+C. kinetic energy of ejected neutrons.
+B. kinetic energy of fission fragments. 
+D. All of these about equally.
+
+B is correct. 
+Choice A supports a popular misconception of gamma radiation in fission. 
+Choice C may be influenced by the large amount of energy of neutrons in fusion reactions, whereby only two particles share energy. 
+Choice D is likely a guess.
+
+** sample simple arithmetics (for like Signe)
+(lession "signes-lession"
+  ;;implicit ordering below
+  (fourfield "10 + 10?" 10 :correct 20 :minusive 0 :plusive 100 :multiplicative)
+  (fourfield "10 * 10?" 10 20 0 :correct 100)
+  (fourfield "10 - 10?" 10 20 :correct 0 100)
+  (walkthrough :multiplicative "remeber that 2 * 3 is the same as taking 2+2-2")
+  (yesno "is 100 more than 45?"))
+
+
+
+1+1?
+
+
+
+
+*** task2
+* validera varandra?
+* videovisning
+* fusklappar
+* animerade genomgångar (liftarens guide till galaxen)
+

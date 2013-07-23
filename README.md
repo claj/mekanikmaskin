@@ -2,6 +2,10 @@
 
 A Clojure based system designed to test people in various forms of knowledge about a course in mechanics for KTH.
 
+## ALPHA!
+
+this is to be used by no-one ATM, code online just for working
+
 ## Usage
 
 Call the (dev) function to load the `dev` namespace.
@@ -25,38 +29,14 @@ To begin working on an application, execute:
 
 and then visit `http://localhost:3000`.
 
-During development of an application, sources will be compiled
-on-demand. Sources include everything located in the `app`
-directory. All compiled output goes to `out/public`. The contents of
-`out/public` are transient and the `out` directory can be deleted at
-any time to trigger a complete re-build.
-
-The contents of `out/public` are the deployment artifacts for this
-project.
-
-If you would like to serve the contents of `out/public` from another
-server and not run the development server. Run:
-
 ```clj
 (watch :development)
 ```
-
-from the application project to automatically build the `:development`
-environment when sources change.
-
-<!-- Copyright 2013 Relevance, Inc. -->
-
-
-
-...write simple set-up a test-system instructions...
-
 (require 'dev)
 (in-ns 'dev)
-(dev/start)
+(start)
 
 then change in service.clj
-
-(watch :development) doesn't work, why?
 
 ## Development
 Please check out the issues page: https://github.com/claj/mekanikmaskin/issues for scrumboard galore.
@@ -111,5 +91,3 @@ The possibility to log in with KTH-ID and click through the tasks until you get 
 Copyright © 2013 Linus Ericsson
 
 Distributed under the Eclipse Public License, the same as Clojure.
-
-‹‹
