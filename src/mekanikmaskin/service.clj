@@ -644,3 +644,69 @@ assert that there are some users availiable"
 ;;short helper for answering
 (defn ans [x]
   (>!! answer-chan x))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Defining lessions
+
+;; one way to define lessions.
+
+;; there should be some kind of relation between the various things here:
+
+;; (lession "signes-lession"
+;;   ;;implicit ordering below
+;;   (fourfield "10 + 10?" :guessing 10 :correct 20 :minusive 0 :plusive 100 :multiplicative)
+;;   (fourfield "10 * 10?" :guessing 10 :plusive 20 :guessing 0 :correct 100)
+;;   (fourfield "10 - 10?" :guessing 10 :minusive 20 :correct 0 :guessing 100)
+;;   (walkthrough :multiplicative "remeber that 2 * 3 is the same as taking 2+2-2")
+;;   (walkthrough :plusive "remeber that adding up numbers goes like this: ")
+;;   (yesno "is 100 more than 45?"))
+
+
+(defn fourfield [query & ansmap]
+  (let [ansmap (apply hash-map ansmap)
+        ;;generate 
+        answerids (repeatedly #(d/tempid :db.part/user) (count ansmap))]
+    ;;create answer ids and relate them to this particular task
+    {:db/id (d/tempid :db.part/user)
+     :task.fourfield/query query
+     }
+))
+
+
+
+;; ok so for each answer there should be a pointer to a complete answer, with a heuristic guess
+
+(defn answer [answer cause])
+
+;; ok so for each cause there should come a next query/or walkthrough
+
+(defn method-for-cause [cause]
+
+)
+
+;;and for each cause in a certain task there should be an identifier.
+
+;; possibly you could learn what gave this error by nearest neighbouring a lot of students doing things wrongly here.
+
+;; also, there could be a range of defined methods for making user interaction, like
+
+'walkthrough
+'yesno
+'forfield
+'freeform
+
+;;that could show the various interaction needed. cool.
+
+(defn lession 
+  "should spit out a suitable datomic transaction to store this defined lession"
+[name & forms]
+  [name forms]
+
+;;this should have a form walk like "get to the list items in forms containing "walkthrough symbol" else check in the lession stack in the database
+;; the 
+
+;; :guessing 10 is an indicator how we should handle guessing - just recover?
+)
+
+(lession "hej" "af" "f")
