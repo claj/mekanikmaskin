@@ -29,12 +29,59 @@ Choice D is likely a guess.
 
 1+1?
 
-
-
-
 *** task2
 * validera varandra?
 * videovisning
 * fusklappar
 * animerade genomgångar (liftarens guide till galaxen)
 
+* math (kurs A gymnasiematte)
+I realize there's a lot of context assigned with this. It's quite uncommon with promille in american textbooks (i think) and they handle time very differently.
+
+
+** time
+** timetables
+** line-, block graphs
+** variation width
+** mean
+*** how to calculate mean when just one item in the set changes
+** median
+** unit change
+** natural numbers
+** decimal numbers
+** rational numbers
+** överslagsräkning
+** priority, parenthesises
+** squaring, squarerroots
+** 10-log
+** percent
+*** promille
+** angles
+** area
+** circumference
+** circle
+** pie charts
+** cylinder
+** block, cube
+
+** hard tasks
+what are they based on? a very good ability to compose various concepts.
+
+does this only come from experience? can it be accelerated?
+
+* defintion of student
+** state
+(a stack of waiting tasks)
+** history
+*** speed
+*** forgettings
+*** uncertainties
+
+** goal
+*** conquer some knowledge
+*** apply some knowledge in various composed tasks
+
+
+
+* store external data with datomic
+How to do it simply?

@@ -13,7 +13,6 @@ takes care of:
 how to store tasks of various types in datomic? by the ref - it's untyped and we can have a
 protocol or whatever in the other end showing the task correctly
 
-
    A student logs in
    and
    gets the first task
@@ -37,7 +36,8 @@ four different heuristics:
         [clojure.test]
         [hiccup.core]
         [datomic.api :only [q db] :as d]
-        [ring.middleware.session.store])
+        [ring.middleware.session.store]
+        [clojure.repl])
   (:require [io.pedestal.service.interceptor  :refer [definterceptor defhandler]]
             [io.pedestal.service.http :as bootstrap]
             [io.pedestal.service.http.route :as route]
@@ -629,38 +629,70 @@ assert that there are some users availiable"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Async things.
 
+(defn query-maker []
+  (let [a (rand-int 10)
+        b (rand-int 10)]
+    {:query (str "what is " a " + " b "?")
+     :answer (str (+ a b))}))
+
 ;; an un-buffered channel:
 (def answer-chan (chan))
+;; a query chan
+(def query-chan (chan))
+;; results are delivered this way:
+(def result-chan (chan))
  
-(future ;;to let go of the repl
-  (go ;;start async transaction
-   (while true ;; run forever
+(future                        ;; to let go of the repl
+  (go                          ;; start async transaction
+   (while true                 ;; run forever
      (let [task (query-maker)] ;; create a task
-       (println (:query task)) ;; output query (apparently this could be put in a channel)
-       (if (== (<! answer-chan) (:answer task)) ;;wait for a new entry in answer-chan
-         (println "correct!")
-         (println "wrong"))))))
+       (>! query-chan (:query task)) ;; output query to query-chan
+       (>! result-chan (if (= (<! answer-chan) (:answer task)) ;;wait for a new entry in answer-chan
+                         "correct" "wrong"))))))
  
-;;short helper for answering
-(defn ans [x]
-  (>!! answer-chan x))
+
+(do (>!! answer-chan "8") (println (<!! result-chan) (<!! query-chan)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; testing if something is likely to be a datom
+ 
+
+(defn decent-datom?
+  "testing that something seems to be a decent datom, catching it early on"
+  {:test [(decent-datom? {:db/id (d/tempid :db.part/user )})]}
+  [datom]
+  (and 
+   (map? datom)
+   (= (type (:db/id datom)) datomic.db.DbId)))
+
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Defining lessions
+ ;; Defining lessions
 
-;; one way to define lessions.
+ ;; one way to define lessions.
 
-;; there should be some kind of relation between the various things here:
+ ;; there should be some kind of relation between the various things here:
 
-;; (lession "signes-lession"
-;;   ;;implicit ordering below
-;;   (fourfield "10 + 10?" :guessing 10 :correct 20 :minusive 0 :plusive 100 :multiplicative)
-;;   (fourfield "10 * 10?" :guessing 10 :plusive 20 :guessing 0 :correct 100)
-;;   (fourfield "10 - 10?" :guessing 10 :minusive 20 :correct 0 :guessing 100)
-;;   (walkthrough :multiplicative "remeber that 2 * 3 is the same as taking 2+2-2")
-;;   (walkthrough :plusive "remeber that adding up numbers goes like this: ")
-;;   (yesno "is 100 more than 45?"))
+ ;; (lession "signes-lession"
+ ;;   ;;implicit ordering below
+ ;;   (fourfield "10 + 10?" :guessing 10 :correct 20 :minusive 0 :plusive 100 :multiplicative)
+ ;;   (fourfield "10 * 10?" :guessing 10 :plusive 20 :guessing 0 :correct 100)
+ ;;   (fourfield "10 - 10?" :guessing 10 :minusive 20 :correct 0 :guessing 100)
+ ;;   (walkthrough :multiplicative "remeber that 2 * 3 is the same as taking 2+2-2")
+ ;;   (walkthrough :plusive "remeber that adding up numbers goes like this: ")
+ ;;   (yesno "is 100 more than 45?"))
+
+
+;; this becames something like a
+;; [lession: "name of lession"]
+;; [task: fourfield, in lession above, query, answers [[][][][]]] 
+;; etc...
+;; and when the various answers... 
+;;
+;;
+
 
 
 (defn fourfield [query & ansmap]
@@ -671,7 +703,7 @@ assert that there are some users availiable"
     {:db/id (d/tempid :db.part/user)
      :task.fourfield/query query
      }
-))
+    ))
 
 
 
@@ -710,3 +742,6 @@ assert that there are some users availiable"
 )
 
 (lession "hej" "af" "f")
+;;probably we get datom like this:
+
+
