@@ -629,29 +629,63 @@ assert that there are some users availiable"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Async things.
 
+;; all the parts are here (almost) - we need to save the student state as well.
+
+
 (defn query-maker []
   (let [a (rand-int 10)
         b (rand-int 10)]
     {:query (str "what is " a " + " b "?")
      :answer (str (+ a b))}))
 
-;; an un-buffered channel:
-(def answer-chan (chan))
-;; a query chan
+;; ___this_should_be_setup_per_user:___
+
+(def user-example 
+  (let [query-chan (chan)
+        answer-chan (chan)
+        result-chan (chan)
+        running (atom true)
+        ]
+    {:username "linus"
+     :query-chan query-chan
+     :answer-chan answer-chan
+     :result-chan result-chan
+     :status running
+     :loop (future (go (while @running
+                         (let [task (query-maker)]
+                           (>! query-chan (:query task))
+                           (>! result-chan (if (= (<! answer-chan) (:answer task))
+                                             "correct!" "wrong"))))))
+     :answer-fn (fn 
+                  ([]     
+                     (println  " query: " (<!! query-chan)))
+                  ([what]  
+                     (>!! answer-chan (str what)) 
+                     (println "result:" (<!! result-chan)) 
+                     (println "query :" (<!! query-chan))))}))
+;; a query channel
 (def query-chan (chan))
+
+;; an answer channel:
+(def answer-chan (chan))
+
 ;; results are delivered this way:
 (def result-chan (chan))
+
+;;this should be setup per user.
  
 (future                        ;; to let go of the repl
   (go                          ;; start async transaction
-   (while true                 ;; run forever
+   (while true                 ;; run forever  - while we have session  - logged in somewhere
      (let [task (query-maker)] ;; create a task
        (>! query-chan (:query task)) ;; output query to query-chan
        (>! result-chan (if (= (<! answer-chan) (:answer task)) ;;wait for a new entry in answer-chan
                          "correct" "wrong"))))))
  
-
-(do (>!! answer-chan "8") (println (<!! result-chan) (<!! query-chan)))
+(defn answer 
+  ([] (println (<!! result-chan) " : " (<!! query-chan)))
+  ([what]
+                 (do (>!! answer-chan (str what)) (answer))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; testing if something is likely to be a datom
@@ -664,9 +698,6 @@ assert that there are some users availiable"
   (and 
    (map? datom)
    (= (type (:db/id datom)) datomic.db.DbId)))
-
-
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;; Defining lessions
@@ -745,3 +776,36 @@ assert that there are some users availiable"
 ;;probably we get datom like this:
 
 
+(def relation-vector [[:task1 0.9 :statmech]
+                      [:task1 0.5 :math]
+                      [:task2 0.4 :statmech]
+                      [:task3 0.6 :statmech]
+                      [:task3 0.9 :math]
+])
+
+(q '[:find ?task ?w1 ?w2 :where [?task ?w1 ?subj] [:task3 ?w2 ?subj]] relation-vector)
+
+;;                     [current fail  ok
+(def next-task-vector [[:task1 :task2 :task3]
+                       [:task2 :task4 :task3]
+                       [:task4 :task5 :task6]
+                       [:task3 :task7 :task9]
+                       [:task7 :task10 :task 11]])
+
+(q '[:find ?task :where ]) ;; men hur var det nu man slog i regler?
+
+
+(defn create-answer 
+  "returns a datom containing an answer, pointing to the function instanciating it"
+  {:post [#(decent-datom? %)]}
+[ ^String text ^Boolean correct reasons ]
+ {:db/id (d/tempid :db.part/user)
+  :task.fourfield.answer/correct correct
+  :task.fourfield.answer/reasons reasons
+  :task.fourfield.answer/text text
+}
+)
+
+(create-answer "2" true [])
+
+;;should use the reverse attributes here...

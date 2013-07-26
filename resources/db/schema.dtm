@@ -112,16 +112,30 @@
 {:db/id #db/id[:db.part/db]
  :db/ident :task.fourfield/answer
  :db/cardinality :db.cardinality/many
- :db/valueType :db.type/string
- :db/doc "correct answers"
+ :db/valueType :db.type/ref
+ :db/doc "pointer to various answers"
  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task.fourfield/wrongalternative
- :db/cardinality :db.cardinality/many
+{:db/id #db/id [:db.part/db]
+ :db/ident :task.fourfield.answer/text
+ :db/cardinality :db.cardinality/one
  :db/valueType :db.type/string
- :db/doc "wrong answers"
- :db.install/_attribute :db.part/db}
+ :db/doc "the answer shown"
+ :db.install/_attribue :db.part/db}
+
+{:db/id #db/id [:db.part/db]
+ :db/ident :task.fourfield.answer/correct
+ :db/cardinality :db.cardinality/one
+ :db/valueType :db.type/boolean
+ :db/doc "is the answer correct or not?"
+ :db.install/_attribue :db.part/db}
+
+{:db/id #db/id [:db.part/db]
+ :db/ident :task.fourfield.answer/reason
+ :db/cardinality :db.cardinality/many
+ :db/valueType :db.type/ref
+ :db/doc "some hint to the heuristics what the student made wrong"
+ :db.install/_attribue :db.part/db}
 
 ;; free text
 
