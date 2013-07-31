@@ -6,6 +6,7 @@ of the last centuries new theories about human learning"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.clojure/tools.logging "0.2.6"]
+                 [org.clojure/core.contracts "0.0.5"]
                  [io.pedestal/pedestal.service "0.1.10-SNAPSHOT"]
                  [io.pedestal/pedestal.jetty "0.1.10-SNAPSHOT"]
                  [ns-tracker "0.2.1"]

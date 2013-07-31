@@ -14,6 +14,12 @@
   :user/password "LcC+94AHKnWSD+g0nCvjAXm6NRRW5Y46vrm3g6i4jGqtz7GtVC40W2QCCbNdC0uo" 
 } ;;"ranch123"
 
+
+;;uuid below belongs to user kajsa (who therefore is logged in)
+{:db/id #db/id [:db.part/user] 
+ :session/identifier #uuid "0845a074-5e2f-4ced-bfe4-2d11c49db7e3"
+ :session/user #db/id [db.part/user -1000002]}
+
  {:db/id #db/id [:db.part/user -1000004]
   :task/query "what is 2+2"
   :task/answer "4"}
@@ -27,4 +33,18 @@
   :answer/task #db/id [:db.part/user -1000004] ;;on 2+2
   :answer/correct true                  ;;and he answered correctly
   :answer/timestamp #inst "2013-07-17T19:00:00.00-00:00" ;;at wed 17 jul 19:00
-  }]
+  }
+
+ {:db/id #db/id [:db.part/user -1000008]
+  :task/type :fourfield}
+
+
+;; (q '[:find ?wrongs :where [17592186045432 :task.fourfield/wrongalternative ?wrongs]] (db conn))
+;; #{["11"] ["10"] ["21"] ["12"] ["0"]}
+;; (:task.fourfield/wrongalternative (d/entity (db conn) 17592186045432))
+;; #{"11" "12" "0" "10" "21"}
+
+;; woha! vad bra.
+;; men nu vill man kunna laegga in lite logik, har tre olika
+
+]

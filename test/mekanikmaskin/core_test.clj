@@ -1,4 +1,5 @@
 (ns mekanikmaskin.core-test
+"what do we test here?"
   (:use [clojure.test]
         [mekanikmaskin.core]
         [mekanikmaskin.task]
@@ -10,6 +11,7 @@
 (fact (= (class (utils/timestamp!)) java.util.Date))
 
 ;;# domain objects
+
 
 ;;## user (student)
 (unfinished legal-state?)
@@ -36,6 +38,8 @@
 
 ;;gain knowledge badge
 (unfinished add-knowledge-badge! ..student.. ..knowledge...)
+
+(fact (add-knowledge-bagde! (student "pelle") (knowledge "mechanics")))
 
 ;;sign up for new goals
 (unfinished add-goal!)

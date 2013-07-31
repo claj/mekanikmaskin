@@ -794,18 +794,19 @@ assert that there are some users availiable"
 
 (q '[:find ?task :where ]) ;; men hur var det nu man slog i regler?
 
-
 (defn create-answer 
   "returns a datom containing an answer, pointing to the function instanciating it"
-  {:post [#(decent-datom? %)]}
-[ ^String text ^Boolean correct reasons ]
+  [^String text ^Boolean correct reasons]
+  {:pre [(coll? reasons)]
+   :post [#(decent-datom? %)]}
  {:db/id (d/tempid :db.part/user)
   :task.fourfield.answer/correct correct
   :task.fourfield.answer/reasons reasons
-  :task.fourfield.answer/text text
-}
-)
+  :task.fourfield.answer/text text})
 
-(create-answer "2" true [])
+
+;;ah, but afcourse, we should use the keywords in the datoms even internally. this makes the
+;;tasks less crazy to work with - why keep different syntax for different places?
+(create-answer "2" true []) 
 
 ;;should use the reverse attributes here...
