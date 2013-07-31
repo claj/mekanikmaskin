@@ -9,6 +9,7 @@ takes care of:
 - handle user logins by pedestal/ring sessions
 - persisting results
 - facilitate user interaction
+- selecting new suitable tasks
 
 how to store tasks of various types in datomic? by the ref - it's untyped and we can have a
 protocol or whatever in the other end showing the task correctly
@@ -179,102 +180,12 @@ assert that there are some users availiable"
 )
 
 (defn timestamp! [] (java.util.Date.))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user login / session handling
 
-;; remeber that sessions is just a :session thingie in the request/response
-;; how does this work in pedestal?
-;; what does it store as sessions key? an UUID?
-;; how is it matched to the browser? through the cookies automatically?
-
-;;about cookies (from middle-ware wrap-cookies
-;; Parses the cookies in the request map, then assocs the resulting map
-;; to the :cookies key on the request.
-
-;; Each cookie is represented as a map, with its value being held in the
-;; :value key. A cookie may optionally contain a :path, :domain or :port
-;; attribute.
-
-;; To set cookies, add a map to the _ :cookies _ key on the response. The values
-;; of the cookie map can either be strings, or maps containing the following
-;; keys:
-
-;; :value - the new value of the cookie
-;; :path - the subpath the cookie is valid for
-;; :domain - the domain the cookie is valid for
-;; :max-age - the maximum age in seconds of the cookie
-;; :expires - a date string at which the cookie will expire
-;; :secure - set to true if the cookie is valid for HTTPS only
-;; :http-only - set to true if the cookie is valid for HTTP only
-
-;; there's a session store:
-;; (ns ring.middleware.session.store
-;;   "Common session store objects and functions.")
-
-;; (defprotocol SessionStore
-;;   (read-session [store key]
-;;     "Read a session map from the store. If the key is not found, an empty map
-;; is returned.")
-;;   (write-session [store key data]
-;;     "Write a session map to the store. Returns the (possibly changed) key under
-;; which the data was stored. If the key is nil, the session is considered
-;; to be new, and a fresh key should be generated.")
-;;   (delete-session [store key]
-;;     "Delete a session map from the store, and returns the session key. If the
-;; returned key is nil, the session cookie will be removed."))
-
-;; This protocol should be implemented by my datomic layer to keep the sessions connected to the users
-;, how was it with the store? is this implicitly given when calling these functions? is it the Datomic db? maybe.
-
-;; this is the inmem storage:
-;; (ns ring.middleware.session.memory
-;;   "In-memory session storage."
-;;   (:use ring.middleware.session.store)
-;;   (:import java.util.UUID))
-
-;; (deftype MemoryStore [session-map] ->  SessionStore  <-
-;;   (read-session [_ key]
-;;     (@session-map key))
-;;   (write-session [_ key data]
-;;     (let [key (or key (str (UUID/randomUUID)))]
-;;       (swap! session-map assoc key data)
-;;       key))
-;;   (delete-session [_ key]
-;;     (swap! session-map dissoc key)
-;;     nil))
-;; (defn memory-store
-;;   "Creates an in-memory session storage engine."
-;;   ([] (memory-store (atom {})))
-;;   ([session-atom] (MemoryStore. session-atom)))
-
-;; also we have a Cookie store
-
-;; (deftype CookieStore [secret-key]
-;;   SessionStore
-;;   (read-session [_ data]
-;;     (if data (unseal secret-key data)))
-;;   (write-session [_ _ data]
-;;     (seal secret-key data))
-;;   (delete-session [_ _]
-;;     (seal secret-key {})))
-
-;;the protocol is like this:
-;;
-;; (defprotocol SessionStore
-;;   (read-session [store key]
-;;     "Read a session map from the store. If the key is not found, an empty map
-;; is returned.")
-;;   (write-session [store key data]
-;;     "Write a session map to the store. Returns the (possibly changed) key under
-;; which the data was stored. If the key is nil, the session is considered
-;; to be new, and a fresh key should be generated.")
-;;   (delete-session [store key]
-;;     "Delete a session map from the store, and returns the session key. If the
-;; returned key is nil, the session cookie will be removed."))
-
-;; so we need the Datomic base layer - to be able to read-session, write-session, delete-session etc
-;; this thingie must be related to the user auth mechanism somehow?
-;; is it so that the session later on get's connected to the users "token"?
+;; will be based on 
+;; https://github.com/hozumi/datomic-session
 
 (defn logged-in? 
   "is there a cookie for this username in the db?"
@@ -297,60 +208,6 @@ assert that there are some users availiable"
 (logged-in? conn "kajsa") ;;returns a hashset with an id of the cookie if ok.
 ;;=> {}
 
-
-(deftype DatomicStore [uuid]
-  SessionStore
-  (read-session [uuid data]
-    nil ;; query for datomic session here
-    ;;what is data here?
-    )
-  (write-session [uuid _ data]
-    nil
-    ;;transact session datom here
-    )
-  (delete-session [uuid _]
-    nil
-    ;;retract session datom here
-    ))
-
-
-;; [:db/retract entity-id attribute value]
-;; [data-fn args*]
-
-;; Each map a transaction contains is equivalent to a set of one or more :db/add operations. The map must include a :db/id key identifying the entity data is being added to (as described below). It may include any number of attribute, value pairs.
-
-;; {:db/id entity-id
-;;  attribute value
-;;  attribute value
-;;  ... }
-
-;; Internally, the map structure gets transformed to the list structure. Each attribute, value pair becomes a :db/add list using the entity-id value associated with the :db/id key.
-
-;; [:db/add entity-id attribute value]
-;; [:db/add entity-id attribute value]
-;; ...
-
-;; The map structure is supported as a convenience when adding data. As a further convenience, the attribute keys in the map may be either keywords or strings. 
-
-;; (defn add-cookie!
-;;   "ah, how do ask a certain db what happends?, like get datom xxx out of this db..."
-;;   [conn username cookie]
-;;   {:post [(logged-in? conn username)]}
-;;   @(d/transact conn [{:db/id (d/tempid :db.part/user)
-;;                     :session/cookie cookie
-;;                     :session/user (d/tempid :db.part/user (username->id conn username))}]))
-
-;; (add-cookie! conn "kajsa" "a2342hahah212")
-;;returns
-;;{:db-before datomic.db.Db@dfba11d8, 
-;; :db-after datomic.db.Db@830b3e7f, 
-;; :tx-data [
-;;    #Datum{:e 13194139534317 :a 50 :v #inst "2013-06-16T15:24:44.644-00:00" :tx 13194139534317 :added true} 
-;;    #Datum{:e 17592186045422 :a 64 :v "a2342hahah" :tx 13194139534317 :added true} 
-;;    #Datum{:e 17592186045422 :a 65 :v 17592186045419 :tx 13194139534317 :added true}
-;;], :tempids {-9223350046623220447 17592186045422}}
-
-;;can we make sure that the cookie is added somehow?
 
 (fact "that there now is a session cookie availiable"
  (q '[:find ?cookie :where [?cookie :session/cookie "a2342hahah"]] (db conn)) =not=> nil)
@@ -413,58 +270,11 @@ assert that there are some users availiable"
     (is (correct-answer? answers correct-reply))
     (is (not (correct-answer? answers wrong-reply)))))
 
-
 (defn answer! 
   "attempts to answer a given exercise from incoming request somehow"
   [student answer-id])
 
-(defprotocol Task
-  (generate [this options]
-    "generate a task given a map options")
-  (correct? [this answer]
-    "answers 'is the given answer correct for this task?'"))
 
-
-;; a task can be
-;;    rendered.
-
-;; dummy version of a task just to see how gorgeous it is to have automatic rendering of 'em
-(defprotocol TaskRender 
-  (to-html [task] "generates an html version of the task")
-  (to-text [task] "genereates a string version of the task"))
-
-;; textbox-query:
-{
- :query "what is 2+2?"
- :exercise-id "exercise 1245"
- :answer "4"}
-
-;; fourfield-query:
-
-{:query "what is 10+10?"
- :exercise-id "exercise 123"
- :continuation {"a" 10 "b" 10}
- :answers [{:id "answerid 222221"
-            :text "20"
-            :correct true}
-           {:id "answerid 222222"
-            :text "0"
-            :correct false}
-           {:id "answerid 222223"
-            :text "12"
-            :correct false}
-           {:id "answerid 222224"
-            :text "100"
-            :correct false}]}
-
-(defprotocol RenderT
-		(to-text [this])
-		(to-html [this]))
-
-(deftype FourFieldT [a b]
-		RenderT
-		(to-text [task] (str "what is " a " + " b "?"))
-		(to-html [task] (str "<h1>what is " a " + " b "?</h1>")))
 
 (defn textbox-query-to-html
   "query? 
@@ -477,10 +287,6 @@ assert that there are some users availiable"
           [:form { :action "/qbox" :method "POST"}
            [:input {:type "textbox" :name "value"}]
            [:input {:type "submit" }]]]]))
-
-
-(defn textbox-query-to-text [query]
-  (str (:query query)))
 
 (defn four-field-query-to-html
   "extemely quick and dirty four field layouting function"
@@ -495,44 +301,43 @@ assert that there are some users availiable"
      [:div {:style "border: solid; width: 10em;"} answer-3] " "
      [:div {:style "border: solid; width: 10em;"} answer-4]]]))
 
-(deftype FourField [task] Task TaskRender
-;;         (generate [task options]) this should be in a factory or something instead!
-         (correct? [task answer])
-         (to-html [task]))
+(defmulti render-task-to-html :task/type)
+
+(defmethod render-task-to-html :task.type/yesno [task-datom] 
+  (html [:html 
+         [:head 
+          [:title "yesno"]]
+         [:body 
+          [:h2 (:task.yesno/query task-datom)]
+          [:div "yes"] 
+          [:div "no"]]]))
+
+(comment
+  (render-task-to-html {:task/type :task.type/yesno
+                        :task.yesno/query "is the sky blue?"}))
+
+(defmethod render-task-to-html :task.type/fourfield [datom]
+  (four-field-query-to-html (:task.fourfield/query datom) 1 2 3 4))
+
+(comment (render-task-to-html {:task/type :task.type/fourfield
+                               :task.fourfield/query "what is 2+02?"}))
+
+(defmethod render-task-to-html :task.type/freeform [datom]
+  (html [:html [:head [:title "freeform"]]
+         [:body [:h2 (:task.freeform/query datom)]
+          [:div "_______________________ [OK]"]]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; score aggregation / select new task
 
-;; given that the user has solved task1, task2 is suitable.
-;; or searching towards a certain goal?
-;; some A* thing.
-
-
-(defn task-at-hand [] nil)
+;; selected from the (ref-)links from the tasks/answers. 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; task history / state
 
-;; (defn task->history!
-;;   "just want to move the task at hand to history with it's answer added on and "
-;;   [student answer]
-;;   ;;assert that we can answer something at all!
-;;   ;;ie we don't have a task at hand here!
-;;   (dosync
-;;    (let [task (task-at-hand student)
-;;          valid? (valid-answer? task answer)
-;;          correct? (correct-answer? (:answers task) answer)
-;;          new-history-item {:timestamp (timestamp!) 
-;;                            :correct correct? 
-;;                            :valid valid? 
-;;                            :task task}]
-;;      ;;remove task
-;;      (alter students-ref assoc-in [student :task-at-hand] nil)
-;;      ;;add-it-to history with result and a timestamp!
-;;      (alter students-ref update-in [student :history] conj new-history-item))))
-
-;; (deftest "task->history"
-;;   (task->history "pelle" "answerid 111111"))
+;; state is contained in datomic
+;; history in the versioning.
+;; later on we can do better analysis of the tasks.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; web templating
@@ -555,13 +360,33 @@ assert that there are some users availiable"
 
 (defn about-page
   [request]
-  (ring-resp/response (about-page)))
+  (-> "about the site!"
+      ring-resp/response 
+      (ring-resp/content-type "text/html")))
 
 (defn login! [request]
   (ring-resp/response "login confirmation placeholder"))
 
 (defn exercise [request]
-  (ring-resp/response (four-field-query-to-html "what is 2+2?" "1" "2" "3" "4") ))
+  (-> (four-field-query-to-html "what is 2+2?" "1" "2" "3" "4") 
+      ring-resp/response 
+      (ring-resp/content-type "text/html")))
+
+(defn show-a-task [req]
+  (let [[eid txt] (first (q '[:find ?eid ?txt :where [?eid :task/query ?txt]] (db conn)))]
+    (-> (str "tid: " eid " task: " txt)
+        ring-resp/response
+        (ring-resp/content-type "text/html"))))
+
+(defn show-the-task 
+  "just a way to show of that we can load one single datom and present some attribute of it according to it's :task/type."
+  [req]
+  (let [id (Long/parseLong (get-in req [:path-params :id]))
+        entity (d/entity (db conn) id)]
+    (do (log/info "found: " id  " of type: " (type id))
+        (-> (render-task-to-html entity)
+            ring-resp/response
+            (ring-resp/content-type "text/html")))))
 
 (defn querybox [req]
   (ring-resp/response (textbox-query-to-html)))
@@ -581,8 +406,11 @@ assert that there are some users availiable"
 
 (defroutes routes
   [[["/" {:get home-page}
-;;     ^:interceptors [(body-params/body-params) bootstrap/html-body] 
-;;     ["/about" {:get about-page}]
+     ["/show-a-task" {:get show-a-task}
+      ["/:id"
+       {:get show-the-task}
+       ]]
+     ["/about" {:get about-page}]
 ;;     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
      ["/exercise" {:get exercise}]
 ;;     ["/qbox" ^:interceptors [middlewares/params] {:get querybox :post ans}]
@@ -594,37 +422,9 @@ assert that there are some users availiable"
               ::bootstrap/type :jetty
               ::bootstrap/port 8080})
 
-
-
-(defn add-cookie!
-  "ah, how do ask a certain db what happends?, like get datom xxx out of this db..."
-  [conn username cookie]
-  {:post [(logged-in? conn username)]}
-  @(d/transact conn [{:db/id (d/tempid :db.part/user)
-                    :session/cookie cookie
-                    :session/user (d/tempid :db.part/user (username->id conn username))}]))
-
-
-;;"task is the various exercises to be solved by students, 
-;;hopefully to learn something
-;;about the course(s) at hand
-;;the individual task can only be solved once.
-;;the "
-
-;;Task properties:
-;; can be rendered to the user (should contain enough info to be able to be...)
-;; is either equivalent to the task in db or have some internal state vars
-
-
-;; want to persist state like this:
-
-;; -generate state
-;; -make task
-;; save state
-;; save task (which could be a part of the state as well, of course)
-;; the task should be fully deterministic, thats all
-
-(defn gen-task [{:keys [a b]}]
+(defn gen-task 
+  "example of generating task function"
+  [{:keys [a b]}]
   {:exercise (str "what's " a " + " b "?")
    :answers [[:correct true :val (+ a b)]
              [:correct false :val (- a b)]
@@ -729,8 +529,6 @@ assert that there are some users availiable"
 ;;
 ;;
 
-
-
 (defn fourfield [query & ansmap]
   (let [ansmap (apply hash-map ansmap)
         ;;generate 
@@ -740,9 +538,6 @@ assert that there are some users availiable"
      :task.fourfield/query query
      }
     ))
-
-
-
 ;; ok so for each answer there should be a pointer to a complete answer, with a heuristic guess
 
 (defn answer [answer cause])
@@ -777,9 +572,6 @@ assert that there are some users availiable"
 ;; :guessing 10 is an indicator how we should handle guessing - just recover?
 )
 
-(lession "hej" "af" "f")
-;;probably we get datom like this:
-
 
 (def relation-vector [[:task1 0.9 :statmech]
                       [:task1 0.5 :math]
@@ -806,10 +598,3 @@ assert that there are some users availiable"
   :task.fourfield.answer/correct correct
   :task.fourfield.answer/reasons reasons
   :task.fourfield.answer/text text})
-
-
-;;ah, but afcourse, we should use the keywords in the datoms even internally. this makes the
-;;tasks less crazy to work with - why keep different syntax for different places?
-(create-answer "2" true []) 
-
-;;should use the reverse attributes here...

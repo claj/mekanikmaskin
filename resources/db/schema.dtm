@@ -76,8 +76,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Task
 
-;;a, typed!
-;; DONT USE
+[:db/add #db/id[:db.part/user] :db/ident :task.type/fourfield]
+[:db/add #db/id[:db.part/user] :db/ident :task.type/yesno]
+[:db/add #db/id[:db.part/user] :db/ident :task.type/freeform]
+[:db/add #db/id[:db.part/user] :db/ident :task.type/game]
+
 {:db/id #db/id[:db.part/db]
  :db/ident :task/query
  :db/cardinality :db.cardinality/one
@@ -137,9 +140,7 @@
  :db/doc "some hint to the heuristics what the student made wrong"
  :db.install/_attribute :db.part/db}
 
-;; free text
-
-;; yes no
+;; yes/no
 
 {:db/id #db/id[:db.part/db]
  :db/ident :task.yesno/query
@@ -153,6 +154,22 @@
  :db/cardinality :db.cardinality/one
  :db/valueType :db.type/boolean
  :db/doc "true or false?"
+ :db.install/_attribute :db.part/db}
+
+;; freeform
+
+{:db/id #db/id[:db.part/db]
+ :db/ident :task.freeform/query
+ :db/cardinality :db.cardinality/one
+ :db/valueType :db.type/string
+ :db/doc "query of the task"
+ :db.install/_attribute :db.part/db}
+
+{:db/id #db/id[:db.part/db]
+ :db/ident :task.freeform/answer
+ :db/cardinality :db.cardinality/one
+ :db/valueType :db.type/string
+ :db/doc "query of the task"
  :db.install/_attribute :db.part/db}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
