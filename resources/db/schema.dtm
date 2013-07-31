@@ -94,7 +94,7 @@
 
 {:db/id #db/id [:db.part/db]
  :db/ident :task/goodaftertask
- :db/valuteType :db.type/ref
+ :db/valueType :db.type/ref
  :db/cardinality :db.cardinality/one
  :db/doc "tells which tasks this particular task is good to come after (we don't know this before the task is made..."
  :db.install/_attribute :db.part/db
@@ -121,21 +121,21 @@
  :db/cardinality :db.cardinality/one
  :db/valueType :db.type/string
  :db/doc "the answer shown"
- :db.install/_attribue :db.part/db}
+ :db.install/_attribute :db.part/db}
 
 {:db/id #db/id [:db.part/db]
  :db/ident :task.fourfield.answer/correct
  :db/cardinality :db.cardinality/one
  :db/valueType :db.type/boolean
  :db/doc "is the answer correct or not?"
- :db.install/_attribue :db.part/db}
+ :db.install/_attribute :db.part/db}
 
 {:db/id #db/id [:db.part/db]
  :db/ident :task.fourfield.answer/reason
  :db/cardinality :db.cardinality/many
  :db/valueType :db.type/ref
  :db/doc "some hint to the heuristics what the student made wrong"
- :db.install/_attribue :db.part/db}
+ :db.install/_attribute :db.part/db}
 
 ;; free text
 
@@ -161,7 +161,7 @@
 
 {:db/id #db/id[:db.part/db]
  :db/ident :heuristics/type
- :db/cardinality :db.cardinality/keyword
+ :db/cardinality :db.cardinality/one
  :db/valueType :db.type/boolean
  :db/doc "which heuristics is in use?"
  :db.install/_attribute :db.part/db}
@@ -189,4 +189,5 @@
 
 [:db/add #db/id[:db.part/user] :db/ident :heuristics.type/by-the-book]
 [:db/add #db/id[:db.part/user] :db/ident :heuristics.type/failrate]
-[:db/add #db/id[:db.part/user] :db/ident :heuristics.type/selected-by-users]]
+[:db/add #db/id[:db.part/user] :db/ident :heuristics.type/selected-by-users]
+]

@@ -1,6 +1,5 @@
 * app
 ** show some concept questions
-
 concept questions mechanics
 
 http://www.arborsci.com/60-questions-physics-students-should-know
@@ -24,8 +23,6 @@ Choice D is likely a guess.
   (fourfield "10 - 10?" 10 20 :correct 0 100)
   (walkthrough :multiplicative "remeber that 2 * 3 is the same as taking 2+2-2")
   (yesno "is 100 more than 45?"))
-
-
 
 1+1?
 

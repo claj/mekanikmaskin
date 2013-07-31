@@ -42,7 +42,7 @@ four different heuristics:
             [io.pedestal.service.http :as bootstrap]
             [io.pedestal.service.http.route :as route]
             [io.pedestal.service.http.body-params :as body-params]
-            [io.pedestal.service.http.route.definition :refer [defroutes]]
+            [io.pedestal.service.http.route.definition :refer [expand-routes defroutes]]
             [io.pedestal.service.http.ring-middlewares :as middlewares]
             [ring.util.response :as ring-resp]            
             [ring.middleware.session.cookie :as cookie]
@@ -87,7 +87,12 @@ four different heuristics:
   "In-mem datomic db for dev" 
   "datomic:mem://mekanikmaskin")
 
-(declare list-of-users)
+(defn list-of-users
+  "returns a list of the users registrerd"
+  [^datomic.peer.LocalConnection conn]
+  {:post [(= (type %) java.util.HashSet) (not (zero? (count %)))]}
+  (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
+
 
 (defn conditional-connect-db 
   "if there is no database or given :force true
@@ -145,6 +150,8 @@ assert that there are some users availiable"
          :in ?username, $] 
        username (db conn))))
 
+
+
 (defn registrer-user! [username pwd pwd2]
   {:pre [(= pwd pwd2), (empty? (user-exists? username))]
    :post [(user-exists? username)]}
@@ -154,7 +161,7 @@ assert that there are some users availiable"
                         :user/password (encrypt-password! pwd)}])))
 
 (defn valid-credentials? [username pwd]
-  {:pre [user-exists? username]}
+  {:pre [(user-exists? username)]}
    (let [conn (d/connect uri)
          pwdhash (ffirst (q '[:find ?pwdhash :where 
                               [?id :user/username ?username]
@@ -163,19 +170,13 @@ assert that there are some users availiable"
                             username (db conn)))]
            (password-ok? pwd pwdhash)))
 
-(registrer-user! "linus" "hahahaha" "hahahaha")
-(valid-credentials? "linus" "hahahaha")
-(valid-credentials? "amundsen" "polarisar")
+;;(registrer-user! "linus" "hahahaha" "hahahaha")
+;;(valid-credentials? "linus" "hahahaha")
+;;(valid-credentials? "amundsen" "polarisar")
 
 (defn remove-user! [username]
   ;;retract in a transaction
 )
-
-(defn list-of-users
-  "returns a list of the users registrerd"
-  [^datomic.peer.LocalConnection conn]
-  {:post [(= (type %) java.util.HashSet) (not (zero? (count %)))]}
-  (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
 
 (defn timestamp! [] (java.util.Date.))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -271,8 +272,6 @@ assert that there are some users availiable"
 ;;     "Delete a session map from the store, and returns the session key. If the
 ;; returned key is nil, the session cookie will be removed."))
 
-;; seal = kvitto, sigill typ
-
 ;; so we need the Datomic base layer - to be able to read-session, write-session, delete-session etc
 ;; this thingie must be related to the user auth mechanism somehow?
 ;; is it so that the session later on get's connected to the users "token"?
@@ -333,15 +332,15 @@ assert that there are some users availiable"
 
 ;; The map structure is supported as a convenience when adding data. As a further convenience, the attribute keys in the map may be either keywords or strings. 
 
-(defn add-cookie!
-  "ah, how do ask a certain db what happends?, like get datom xxx out of this db..."
-  [conn username cookie]
-  {:post [(logged-in? conn username)]}
-  @(d/transact conn [{:db/id (d/tempid :db.part/user)
-                    :session/cookie cookie
-                    :session/user (d/tempid :db.part/user (username->id conn username))}]))
+;; (defn add-cookie!
+;;   "ah, how do ask a certain db what happends?, like get datom xxx out of this db..."
+;;   [conn username cookie]
+;;   {:post [(logged-in? conn username)]}
+;;   @(d/transact conn [{:db/id (d/tempid :db.part/user)
+;;                     :session/cookie cookie
+;;                     :session/user (d/tempid :db.part/user (username->id conn username))}]))
 
-(add-cookie! conn "kajsa" "a2342hahah212")
+;; (add-cookie! conn "kajsa" "a2342hahah212")
 ;;returns
 ;;{:db-before datomic.db.Db@dfba11d8, 
 ;; :db-after datomic.db.Db@830b3e7f, 
@@ -480,7 +479,7 @@ assert that there are some users availiable"
            [:input {:type "submit" }]]]]))
 
 
-(defn textbox-query-to-tex [query]
+(defn textbox-query-to-text [query]
   (str (:query query)))
 
 (defn four-field-query-to-html
@@ -499,7 +498,7 @@ assert that there are some users availiable"
 (deftype FourField [task] Task TaskRender
 ;;         (generate [task options]) this should be in a factory or something instead!
          (correct? [task answer])
-         (to-html [task])Ä)
+         (to-html [task]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; score aggregation / select new task
@@ -509,29 +508,31 @@ assert that there are some users availiable"
 ;; some A* thing.
 
 
+(defn task-at-hand [] nil)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; task history / state
 
-(defn task->history!
-  "just want to move the task at hand to history with it's answer added on and "
-  [student answer]
-  ;;assert that we can answer something at all!
-  ;;ie we don't have a task at hand here!
-  (dosync
-   (let [task (task-at-hand student)
-         valid? (valid-answer? task answer)
-         correct? (correct-answer? (:answers task) answer)
-         new-history-item {:timestamp (timestamp!) 
-                           :correct correct? 
-                           :valid valid? 
-                           :task task}]
-     ;;remove task
-     (alter students-ref assoc-in [student :task-at-hand] nil)
-     ;;add-it-to history with result and a timestamp!
-     (alter students-ref update-in [student :history] conj new-history-item))))
+;; (defn task->history!
+;;   "just want to move the task at hand to history with it's answer added on and "
+;;   [student answer]
+;;   ;;assert that we can answer something at all!
+;;   ;;ie we don't have a task at hand here!
+;;   (dosync
+;;    (let [task (task-at-hand student)
+;;          valid? (valid-answer? task answer)
+;;          correct? (correct-answer? (:answers task) answer)
+;;          new-history-item {:timestamp (timestamp!) 
+;;                            :correct correct? 
+;;                            :valid valid? 
+;;                            :task task}]
+;;      ;;remove task
+;;      (alter students-ref assoc-in [student :task-at-hand] nil)
+;;      ;;add-it-to history with result and a timestamp!
+;;      (alter students-ref update-in [student :history] conj new-history-item))))
 
-(deftest "task->history"
-  (task->history "pelle" "answerid 111111"))
+;; (deftest "task->history"
+;;   (task->history "pelle" "answerid 111111"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; web templating
@@ -545,7 +546,12 @@ assert that there are some users availiable"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; web request handling
 
-(def url-for (route/url-for-routes routes))
+;;(def url-for (route/url-for-routes routes))
+
+(defn home-page [req]
+  (ring-resp/content-type 
+   (ring-resp/response "<html><h1>hello hello!</h1></html>")
+   "text/html"))
 
 (defn about-page
   [request]
@@ -555,10 +561,10 @@ assert that there are some users availiable"
   (ring-resp/response "login confirmation placeholder"))
 
 (defn exercise [request]
-  (ring-resp/response (layouting/four-field "what is 2+2?" "1" "2" "3" "4") ))
+  (ring-resp/response (four-field-query-to-html "what is 2+2?" "1" "2" "3" "4") ))
 
 (defn querybox [req]
-  (ring-resp/response (layouting/textbox-query "what is 2+3?")))
+  (ring-resp/response (textbox-query-to-html)))
 
 (defn ans 
   "receieves an answer, returns yet another page?"
@@ -568,27 +574,27 @@ assert that there are some users availiable"
     ;;if value was ok, render a new (harder) task
     ;;if value was not ok, render a new, easier task
     )
-  (ring-resp/response (str @state-atom)))
+  (ring-resp/response (str "nothing yet")))
 
 (definterceptor session-interceptor
   (middlewares/session {:store (cookie/cookie-store)}))
 
 (defroutes routes
   [[["/" {:get home-page}
-     ^:interceptors [(body-params/body-params) bootstrap/html-body] 
-     ["/about" {:get about-page}]
-     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
+;;     ^:interceptors [(body-params/body-params) bootstrap/html-body] 
+;;     ["/about" {:get about-page}]
+;;     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
      ["/exercise" {:get exercise}]
-     ["/qbox" ^:interceptors [middlewares/params] {:get querybox :post ans}]]]])
-
-;;; WASTELAND
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;     ["/qbox" ^:interceptors [middlewares/params] {:get querybox :post ans}]
+     ]]])
 
 (def service {:env :prod
               ::bootstrap/routes routes
               ::bootstrap/resource-path "/public"
               ::bootstrap/type :jetty
               ::bootstrap/port 8080})
+
+
 
 (defn add-cookie!
   "ah, how do ask a certain db what happends?, like get datom xxx out of this db..."
@@ -624,7 +630,6 @@ assert that there are some users availiable"
              [:correct false :val (- a b)]
              [:correct false :val 0] ;;but this is not nesc false!
              [:correct false :val (- b a)]]})
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Async things.
@@ -791,8 +796,6 @@ assert that there are some users availiable"
                        [:task4 :task5 :task6]
                        [:task3 :task7 :task9]
                        [:task7 :task10 :task 11]])
-
-(q '[:find ?task :where ]) ;; men hur var det nu man slog i regler?
 
 (defn create-answer 
   "returns a datom containing an answer, pointing to the function instanciating it"
