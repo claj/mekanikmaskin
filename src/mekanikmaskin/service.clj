@@ -349,10 +349,10 @@ assert that there are some users availiable"
             ring-resp/response
             (ring-resp/content-type "text/html")))))
 
-;;why does it escape the link?
+;;why does url-for escape the links?
 
 (defn list-tasks 
-  "terrible function for list tasks, but it works"
+  "very terrible function for list tasks, but it works"
 [req]
   (let [ids (q '[:find ?eid :where [?eid :task/type _]] (db conn))
         entities(map #(d/entity (db conn) (first  %)) ids)]

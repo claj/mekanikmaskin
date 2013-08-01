@@ -46,6 +46,15 @@
   :task.yesno/query "is the sky blue?"
   :task.yesno/true true}
 
+ {:db/id #db/id [:db.part/user]
+  :task/type :task.type/yesno
+  :task.yesno/query "is 2+8 = 11?"
+  :task.yesno/true false}
+
+ {:db/id #db/id [:db.part/user]
+  :task/type :task.type/yesno
+  :task.yesno/query "is 16+8 = 24?"
+  :task.yesno/true true}
 
  {:db/id #db/id [:db.part/user -1000010]
   :task/type :task.type/freeform
