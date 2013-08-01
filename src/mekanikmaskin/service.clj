@@ -31,8 +31,7 @@ four different heuristics:
  - failrate (accumulated thorugh users / NN for various neighbours)
  - flowrate / we want you in flow / time derivative?
 "
-  (:import [clojure.lang Keyword]
-           [org.jasypt.util.password StrongPasswordEncryptor])
+  (:import [org.jasypt.util.password StrongPasswordEncryptor])
   (:use [midje.sweet]
         [clojure.test]
         [hiccup.core]
@@ -151,8 +150,6 @@ assert that there are some users availiable"
          :in ?username, $] 
        username (db conn))))
 
-
-
 (defn registrer-user! [username pwd pwd2]
   {:pre [(= pwd pwd2), (empty? (user-exists? username))]
    :post [(user-exists? username)]}
@@ -189,15 +186,12 @@ assert that there are some users availiable"
 
 (defn logged-in? 
   "is there a cookie for this username in the db?"
-  [conn username]
+  [conn ^String username]
   (q '[:find ?id :where [?uid :user/username ?username] [?id :session/user ?uid] :in $ ?username] (db conn) username))
 
-(defn username->id [conn username]
-  (ffirst (q '[:find ?id :where [?id :user/username ?username] :in $ ?username] (db conn) username)))
-
-;;are these really nesc?
-
-(defn username->id [conn username]
+(defn username->id 
+  "finds the id of a user datom"
+  [conn ^String username]
   (ffirst (q '[:find ?id :where [?id :user/username ?username] :in $ ?username] (db conn) username)))
 
 (fact (username->id conn "kajsa") =not=> nil)
@@ -205,44 +199,13 @@ assert that there are some users availiable"
 (defn verify-session [conn username cookie]
   (q '[:find ?id :where [?uid :user/username ?username] [?id :session/user ?uid] :in $ ?username] (db conn) username))
 
-(logged-in? conn "kajsa") ;;returns a hashset with an id of the cookie if ok.
-;;=> {}
-
+(fact (empty? (logged-in? conn "kajsa")) => falsey) ;;returns a hashset with an id of the cookie if ok.
 
 (fact "that there now is a session cookie availiable"
  (q '[:find ?cookie :where [?cookie :session/cookie "a2342hahah"]] (db conn)) =not=> nil)
 
 (fact "that there are users in the database and we can find them"
       (list-of-users) =not=> empty?)
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; task creation
-
-(defn query-maker
-  "generates a simple math-query and the answer to it"
-  []
-  (let [a (rand-int 10) b (rand-int 10)]
-    {:query (str "what is " a " + " b "?")
-     :answer (+ a b)}))
-
-;; {:query "what is 1 + 2 ?" :answer 3}
-
-{:task "what is 10+10?"
- :exercise-id "exercise 123"
- :continuation {"a" 10 "b" 10}
- :answers [{:id "answerid 222221"
-            :text "20"
-            :correct true}
-           {:id "answerid 222222"
-            :text "0"
-            :correct false}
-           {:id "answerid 222223"
-            :text "12"
-            :correct false}
-           {:id "answerid 222224"
-            :text "100"
-            :correct false}]}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; answering
@@ -273,8 +236,6 @@ assert that there are some users availiable"
 (defn answer! 
   "attempts to answer a given exercise from incoming request somehow"
   [student answer-id])
-
-
 
 (defn textbox-query-to-html
   "query? 
@@ -350,8 +311,7 @@ assert that there are some users availiable"
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; web request handling
-
-;;(def url-for (route/url-for-routes routes))
+(declare url-for)
 
 (defn home-page [req]
   (ring-resp/content-type 
@@ -378,6 +338,7 @@ assert that there are some users availiable"
         ring-resp/response
         (ring-resp/content-type "text/html"))))
 
+
 (defn show-the-task 
   "just a way to show of that we can load one single datom and present some attribute of it according to it's :task/type."
   [req]
@@ -388,33 +349,42 @@ assert that there are some users availiable"
             ring-resp/response
             (ring-resp/content-type "text/html")))))
 
-(defn querybox [req]
-  (ring-resp/response (textbox-query-to-html)))
+;;why does it escape the link?
 
-(defn ans 
-  "receieves an answer, returns yet another page?"
-  [req]
-  (let [value (str (get (:form-params req) "value"))]
-
-    ;;if value was ok, render a new (harder) task
-    ;;if value was not ok, render a new, easier task
-    )
-  (ring-resp/response (str "nothing yet")))
+(defn list-tasks 
+  "terrible function for list tasks, but it works"
+[req]
+  (let [ids (q '[:find ?eid :where [?eid :task/type _]] (db conn))
+        entities(map #(d/entity (db conn) (first  %)) ids)]
+    (->  (map #(str "<a href=" (url-for :mekanikmaskin.service/show-the-task :app-name :mekanikmaskinen :params {:id (:db/id %)}) ">" (str (:db/id %)) "</a> " (:task/type %) " " ) entities)
+        ring-resp/response
+        (ring-resp/content-type "text/html"))))
 
 (definterceptor session-interceptor
   (middlewares/session {:store (cookie/cookie-store)}))
 
 (defroutes routes
-  [[["/" {:get home-page}
+  [[:mekanikmaskinen
+    ["/" {:get home-page}
+     ["/list-tasks" {:get list-tasks}]
      ["/show-a-task" {:get show-a-task}
       ["/:id"
        {:get show-the-task}
        ]]
-     ["/about" {:get about-page}]
+     ["/about" {:get about-page}]]
 ;;     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
-     ["/exercise" {:get exercise}]
-;;     ["/qbox" ^:interceptors [middlewares/params] {:get querybox :post ans}]
-     ]]])
+     
+    ["/exercise" {:get exercise}]]])
+
+;; cannot see why this should not work...
+(def url-for (route/url-for-routes routes :app-name :mekanikmaskinen))
+
+(route/print-routes routes )
+(url-for :mekanikmaskin.service/about-page :app-name :mekanikmaskinen)
+
+(url-for :mekanikmaskin.service/show-the-task :params {:id 123} :app-name :mekanikmaskinen)
+
+(first routes)
 
 (def service {:env :prod
               ::bootstrap/routes routes
@@ -488,14 +458,15 @@ assert that there are some users availiable"
                          "correct" "wrong"))))))
  
 (defn answer 
+  "when running without argument it initializes the repl-loop, 
+then (answer 24) answers the number 24"
   ([] (println (<!! result-chan) " : " (<!! query-chan)))
   ([what]
-                 (do (>!! answer-chan (str what)) (answer))))
+     (do (>!! answer-chan (str what)) (answer))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; testing if something is likely to be a datom
  
-
 (defn decent-datom?
   "testing that something seems to be a decent datom, catching it early on"
   {:test [(decent-datom? {:db/id (d/tempid :db.part/user )})]}
@@ -529,37 +500,17 @@ assert that there are some users availiable"
 ;;
 ;;
 
-(defn fourfield [query & ansmap]
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; task creation
+
+(defn fourfield-generator [query & ansmap]
   (let [ansmap (apply hash-map ansmap)
         ;;generate 
         answerids (repeatedly #(d/tempid :db.part/user) (count ansmap))]
     ;;create answer ids and relate them to this particular task
     {:db/id (d/tempid :db.part/user)
-     :task.fourfield/query query
-     }
-    ))
-;; ok so for each answer there should be a pointer to a complete answer, with a heuristic guess
+     :task.fourfield/query query}))
 
-(defn answer [answer cause])
-
-;; ok so for each cause there should come a next query/or walkthrough
-
-(defn method-for-cause [cause]
-
-)
-
-;;and for each cause in a certain task there should be an identifier.
-
-;; possibly you could learn what gave this error by nearest neighbouring a lot of students doing things wrongly here.
-
-;; also, there could be a range of defined methods for making user interaction, like
-
-'walkthrough
-'yesno
-'forfield
-'freeform
-
-;;that could show the various interaction needed. cool.
 
 (defn lession 
   "should spit out a suitable datomic transaction to store this defined lession"
