@@ -24,7 +24,7 @@ of the last centuries new theories about human learning"
                  ;;quick and dirty templates
                  [hiccup "1.0.3"]] 
   :profiles {:dev {:dependencies [[midje "1.5.1"]]
-                   :source-paths ["dev"]}}
+                   :source-paths ["dev" "src"]}}
   :min-lein-version "2.0.0"
   :resource-paths ["config", "resources"]
   :aliases {"run-dev" ["trampoline" "run" "-m" "dev"]}

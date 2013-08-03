@@ -277,8 +277,14 @@ assert that there are some users availiable"
   (render-task-to-html {:task/type :task.type/yesno
                         :task.yesno/query "is the sky blue?"}))
 
+(defn read-answer-text [fourfield-answer-datom]
+  (:task.fourfield.answer/text (d/entity (db conn) (:db/id fourfield-answer-datom))))
+
+;;reads a fourfield and it's datom answers...
 (defmethod render-task-to-html :task.type/fourfield [datom]
-  (four-field-query-to-html (:task.fourfield/query datom) 1 2 3 4))
+  (let [query-txt (:task.fourfield/query datom)
+        [a b c d]  (vec (map read-answer-text (shuffle (take 4 (:task.fourfield/answer datom)))))]
+    (four-field-query-to-html query-txt a b c d)))
 
 (comment (render-task-to-html {:task/type :task.type/fourfield
                                :task.fourfield/query "what is 2+02?"}))
@@ -315,12 +321,13 @@ assert that there are some users availiable"
 
 (defn home-page [req]
   (ring-resp/content-type 
-   (ring-resp/response "<html><h1>hello hello!</h1></html>")
+   (ring-resp/response "<html><h1>hello hello!</h1><a href=\"list\">List of tasks</a><br/>
+<a href=\"/about\">about the site!</a></html>")
    "text/html"))
 
 (defn about-page
   [request]
-  (-> "about the site!"
+  (-> "<h2>about the site</h2> this is a site where you can learn anything by repeatedly answering the questions. you probably won't get feedback until you know everything you need to be knowing. progress is the key"
       ring-resp/response 
       (ring-resp/content-type "text/html")))
 
@@ -332,13 +339,6 @@ assert that there are some users availiable"
       ring-resp/response 
       (ring-resp/content-type "text/html")))
 
-(defn show-a-task [req]
-  (let [[eid txt] (first (q '[:find ?eid ?txt :where [?eid :task/query ?txt]] (db conn)))]
-    (-> (str "tid: " eid " task: " txt)
-        ring-resp/response
-        (ring-resp/content-type "text/html"))))
-
-
 (defn show-the-task 
   "just a way to show of that we can load one single datom and present some attribute of it according to it's :task/type."
   [req]
@@ -349,16 +349,17 @@ assert that there are some users availiable"
             ring-resp/response
             (ring-resp/content-type "text/html")))))
 
-;;why does url-for escape the links?
-
+;;why does url-for escape the links??
 (defn list-tasks 
   "very terrible function for list tasks, but it works"
 [req]
-  (let [ids (q '[:find ?eid :where [?eid :task/type _]] (db conn))
-        entities(map #(d/entity (db conn) (first  %)) ids)]
-    (->  (map #(str "<a href=" (url-for :mekanikmaskin.service/show-the-task :app-name :mekanikmaskinen :params {:id (:db/id %)}) ">" (str (:db/id %)) "</a> " (:task/type %) " " ) entities)
+  (let [ids      (q '[:find ?eid :where [?eid :task/type _]] (db conn))
+        entities (map #(d/entity (db conn) (first  %)) ids)]
+    (-> (apply str (map #(str "<a href=" (url-for :mekanikmaskin.service/show-the-task :app-name :mekanikmaskinen :params {:id (:db/id %)}) ">" (str (:db/id %)) "</a> " (:task/type %) " <br/>" ) entities))
         ring-resp/response
         (ring-resp/content-type "text/html"))))
+
+
 
 (definterceptor session-interceptor
   (middlewares/session {:store (cookie/cookie-store)}))
@@ -366,25 +367,14 @@ assert that there are some users availiable"
 (defroutes routes
   [[:mekanikmaskinen
     ["/" {:get home-page}
-     ["/list-tasks" {:get list-tasks}]
-     ["/show-a-task" {:get show-a-task}
-      ["/:id"
-       {:get show-the-task}
-       ]]
+     ["/list" {:get list-tasks}]
+     ["/task/:id" {:get show-the-task}]
      ["/about" {:get about-page}]]
 ;;     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
      
     ["/exercise" {:get exercise}]]])
 
-;; cannot see why this should not work...
 (def url-for (route/url-for-routes routes :app-name :mekanikmaskinen))
-
-(route/print-routes routes )
-(url-for :mekanikmaskin.service/about-page :app-name :mekanikmaskinen)
-
-(url-for :mekanikmaskin.service/show-the-task :params {:id 123} :app-name :mekanikmaskinen)
-
-(first routes)
 
 (def service {:env :prod
               ::bootstrap/routes routes
@@ -497,20 +487,80 @@ then (answer 24) answers the number 24"
 ;; [task: fourfield, in lession above, query, answers [[][][][]]] 
 ;; etc...
 ;; and when the various answers... 
-;;
-;;
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; task creation
 
-(defn fourfield-generator [query & ansmap]
-  (let [ansmap (apply hash-map ansmap)
-        ;;generate 
-        answerids (repeatedly #(d/tempid :db.part/user) (count ansmap))]
-    ;;create answer ids and relate them to this particular task
-    {:db/id (d/tempid :db.part/user)
-     :task.fourfield/query query}))
+(defn find-duplicate-fourfield [task-text]
+  (q '[:find ?eid :in $ ?text :where [?eid :task.fourfield/query ?text] ] (db conn) task-text ))
 
+(defn fourfield-saver 
+  "expects the source (string) a text query, the correct answer and at least three non correct answers."
+  [source task-text correct-answer-text & other-answers]
+  {:pre [(>= (count other-answers) 3) (empty? (find-duplicate-fourfield task-text))]
+   :post [(vector? %) (every? map? %) (every? :db/id %)]}
+  (let [task-id           (d/tempid :db.part/user)
+        correct-answer-id (d/tempid :db.part/user)
+        other-answers-ids (take (count other-answers) (repeatedly #(d/tempid :db.part/user)))]
+
+    (-> (mapv #(hash-map :db/id %1 :task.fourfield.answer/text %2) other-answers-ids other-answers)
+        (conj 
+         {:db/id task-id
+          :task/type :task.type/fourfield
+          :task.fourfield/query task-text 
+          :task/source source
+          :task.fourfield/answer (vec (conj other-answers-ids correct-answer-id))})
+        (conj 
+         {:db/id correct-answer-id
+          :task.fourfield.answer/text correct-answer-text
+          :task.fourfield.answer/correct true})
+)))
+
+;; adding pi query, nuclear query
+;; this could be read form a csv form is we are really lazy
+;; with row references? moahaha
+
+@(d/transact conn (fourfield-saver "public domain" "what's pi?"
+                                   "~3.14"
+                                   "~0.707"
+                                   "~7.26"
+                                   "~1.44"))
+
+@(d/transact conn (fourfield-saver "?" "When an uranium nucleus undergoes fission, the energy released is primarily in the form of" 
+                                   "kinetic energy of ejected neutrons"
+                                   "gamma radiation" 
+                                   "kinetic energy of fission fragments" 
+                                   "an about equal mix of gamma radiation, kinetic energy of ejected neutrons and fission fragments" ))
+
+(def some-fourfields  [
+["LE" 
+ "what is 10*35?" 
+ "350" 
+ "100" "35" "1035" "3500"]
+["LE" 
+ "what is 45+23" 
+ "68" 
+ "78" "58" "57"]
+["ask.ca/~pywell/p121/Concept/Con02.html" 
+ "An alien space traveller exploring the earth records that his phasor pistol, dropped from a high cliff, fell a distance of 1 glong in a time of 1 tock. How far will it fall in 2 tocks? (Ignore air resistance.)" 
+ "4 glongs" 
+ "3 glongs" "2 glongs" "1.5 glongs"]
+["http://physics.usask.ca/~pywell/p121/Concept/Con37.html" 
+ "A vector A is added to a vector B. Under what conditions does the resultant vector A + B have greatest magnitude?" 
+ "When A and B are parallel and in the same direction." 
+ "When A and B are parallel and in the opposite direction."
+ "When A and B are perpendicular."  
+ "The magnitude of A + B does not depend on the directions of A and B."]
+["http://physics.usask.ca/~pywell/p121/Concept/Con37.html"
+ "In a Young's double slit experiment, light and dark fringes are observed on distant screen. What would happen if the wavelength of the light was increased?" 
+ "The distance between light fringes would increase."
+ "The fringes would become brighter"
+ "More fringes would be visible."
+ "The distance between dark fringes would decrease."]
+])
+
+(map #(deref (d/transact conn (apply fourfield-saver %))) some-fourfields)
+(log/info "inserted some four fields")
 
 (defn lession 
   "should spit out a suitable datomic transaction to store this defined lession"
@@ -523,14 +573,12 @@ then (answer 24) answers the number 24"
 ;; :guessing 10 is an indicator how we should handle guessing - just recover?
 )
 
-
 (def relation-vector [[:task1 0.9 :statmech]
                       [:task1 0.5 :math]
                       [:task2 0.4 :statmech]
                       [:task3 0.6 :statmech]
                       [:task3 0.9 :math]
 ])
-
 (q '[:find ?task ?w1 ?w2 :where [?task ?w1 ?subj] [:task3 ?w2 ?subj]] relation-vector)
 
 ;;                     [current fail  ok

@@ -36,7 +36,7 @@
    (catch Throwable e (.printStackTrace e))))
  
 (defn watch
-  ([] (watch ["src"]))
+  ([] (watch ["src" "dev"]))
   ([src-paths]
      (let [track (tracker/ns-tracker src-paths)
            done (atom false)]

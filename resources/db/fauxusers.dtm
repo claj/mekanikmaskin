@@ -14,7 +14,6 @@
   :user/password "LcC+94AHKnWSD+g0nCvjAXm6NRRW5Y46vrm3g6i4jGqtz7GtVC40W2QCCbNdC0uo" 
 } ;;"ranch123"
 
-
 ;;uuid below belongs to user kajsa (who therefore is logged in)
 {:db/id #db/id [:db.part/user] 
  :session/identifier #uuid "0845a074-5e2f-4ced-bfe4-2d11c49db7e3"
@@ -33,12 +32,6 @@
   :answer/task #db/id [:db.part/user -1000004] ;;on 2+2
   :answer/correct true                  ;;and he answered correctly
   :answer/timestamp #inst "2013-07-17T19:00:00.00-00:00" ;;at wed 17 jul 19:00
-  }
-
- {:db/id #db/id [:db.part/user -1000008]
-  :task/type :task.type/fourfield
-  :task.fourfield/query "This is a fourfield query"
-;;add some answers
   }
 
  {:db/id #db/id [:db.part/user -1000009]
@@ -60,22 +53,5 @@
   :task/type :task.type/freeform
   :task.freeform/query "what is the meaning of life?"
   :task.freeform/answer "42"}
-
-;; {:query "what is 10+10?"
-;;  :exercise-id "exercise 123"
-;;  :continuation {"a" 10 "b" 10}
-;;  :answers [{:id "answerid 222221"
-;;             :text "20"
-;;             :correct true}
-;;            {:id "answerid 222222"
-;;             :text "0"
-;;             :correct false}
-;;            {:id "answerid 222223"
-;;             :text "12"
-;;             :correct false}
-;;            {:id "answerid 222224"
-;;             :text "100"
-;;             :correct false}]}
-
-;; {:query "what is 1 + 2 ?" :answer 3}
 ]
+
