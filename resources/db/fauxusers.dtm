@@ -19,39 +19,31 @@
  :session/identifier #uuid "0845a074-5e2f-4ced-bfe4-2d11c49db7e3"
  :session/user #db/id [db.part/user -1000002]}
 
- {:db/id #db/id [:db.part/user -1000004]
-  :task/query "what is 2+2"
-  :task/answer "4"}
- 
- {:db/id #db/id [:db.part/user -1000005]
-  :task/query "what is 2+6"
-  :task/answer "8"}
- 
- {:db/id #db/id [:db.part/user -1000007]
-  :answer/user #db/id [:db.part/user -1000001] ;;pelle has answered
-  :answer/task #db/id [:db.part/user -1000004] ;;on 2+2
-  :answer/correct true                  ;;and he answered correctly
-  :answer/timestamp #inst "2013-07-17T19:00:00.00-00:00" ;;at wed 17 jul 19:00
-  }
+;; {:db/id #db/id [:db.part/user -1000007]
+;;  :answer/user #db/id [:db.part/user -1000001]  ;;pelle has answered
+;;  :answer/task #db/id [:db.part/user -1000004]  ;;on 2+2
+;;  :answer/correct true ;;and he answered correctly
+;;  :answer/timestamp #inst "2013-07-17T19:00:00.00-00:00" ;;at wed 17 jul 19:00
+;;  }
 
- {:db/id #db/id [:db.part/user -1000009]
-  :task/type :task.type/yesno
-  :task.yesno/query "is the sky blue?"
-  :task.yesno/true true}
+{:db/id #db/id [:db.part/user -1000009]
+ :task/type :task.type/yesno
+ :task/query "is the sky blue?"
+ :task.yesno/true true}
 
- {:db/id #db/id [:db.part/user]
-  :task/type :task.type/yesno
-  :task.yesno/query "is 2+8 = 11?"
-  :task.yesno/true false}
+{:db/id #db/id [:db.part/user]
+ :task/type :task.type/yesno
+ :task/query "is 2+8 = 11?"
+ :task.yesno/true false}
 
- {:db/id #db/id [:db.part/user]
-  :task/type :task.type/yesno
-  :task.yesno/query "is 16+8 = 24?"
-  :task.yesno/true true}
+{:db/id #db/id [:db.part/user]
+ :task/type :task.type/yesno
+ :task/query "is 16+8 = 24?"
+ :task.yesno/true true}
 
- {:db/id #db/id [:db.part/user -1000010]
-  :task/type :task.type/freeform
-  :task.freeform/query "what is the meaning of life?"
-  :task.freeform/answer "42"}
+{:db/id #db/id [:db.part/user -1000010]
+ :task/type :task.type/freeform
+ :task/query "what is the meaning of life?"
+ :task.freeform/answer "42"}
 ]
 

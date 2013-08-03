@@ -1,228 +1,216 @@
-;;login profiles
-{:db/id #db/id[:db.part/db]
- :db/ident :user/username
- :db/valueType :db.type/string
- :db/cardinality :db.cardinality/one
- :db/unique :db.unique/value
- :db/doc "A users's username"
- :db.install/_attribute :db.part/db}
+[
+ ;;login profiles
+ {:db/id #db/id[:db.part/db]
+  :db/ident :user/username
+  :db/valueType :db.type/string
+  :db/cardinality :db.cardinality/one
+  :db/unique :db.unique/value
+  :db/doc "A users's username"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :user/password
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "A user's hashed password"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :user/password
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/string
+  :db/doc "A user's hashed password"
+  :db.install/_attribute :db.part/db}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;stores a session with an uuid
+ ;;stores a session with an uuid
 
-{:db/id #db/id[:db.part/db]
- :db/ident :session/identifier
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/uuid
- :db/doc "A session's magic cookie"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :session/identifier
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/uuid
+  :db/doc "A session's magic cookie"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :session/user
- :db/cardinality :db.cardinality/one 
- :db/valueType :db.type/ref
- :db/doc "Who owns this cookie?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :session/user
+  :db/cardinality :db.cardinality/one 
+  :db/valueType :db.type/ref
+  :db/doc "Who owns this cookie?"
+  :db.install/_attribute :db.part/db}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; answer
+ ;; answer
 
-{:db/id #db/id[:db.part/db]
- :db/ident :answer/correct
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/boolean
- :db/doc "was the answer correct?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :answer/correct
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/boolean
+  :db/doc "was the answer correct?"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :answer/user
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/ref
- :db/doc "which user answered?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :answer/user
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/ref
+  :db/doc "which user answered?"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :answer/task
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/ref
- :db/doc "which task was answered?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :answer/task
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/ref
+  :db/doc "which task was answered?"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :answer/timestamp
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/instant
- :db/doc "when was it answered?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :answer/timestamp
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/instant
+  :db/doc "when was it answered?"
+  :db.install/_attribute :db.part/db}
 
 ;;; type dispatch - can a query have multiple types? likely...
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task/type
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/keyword
- :db/doc "what type is the task?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task/type
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/keyword
+  :db/doc "what type is the task?"
+  :db.install/_attribute :db.part/db}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Task
+ ;; Task
 
-[:db/add #db/id[:db.part/user] :db/ident :task.type/fourfield]
-[:db/add #db/id[:db.part/user] :db/ident :task.type/yesno]
-[:db/add #db/id[:db.part/user] :db/ident :task.type/freeform]
-[:db/add #db/id[:db.part/user] :db/ident :task.type/game]
+ [:db/add #db/id[:db.part/user] :db/ident :task.type/fourfield]
+ [:db/add #db/id[:db.part/user] :db/ident :task.type/yesno]
+ [:db/add #db/id[:db.part/user] :db/ident :task.type/freeform]
+ [:db/add #db/id[:db.part/user] :db/ident :task.type/game]
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task/query
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "query of the task"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task/query
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/string
+  :db/doc "query of the task"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task/source
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "where was this query found, taken from?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task/source
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/string
+  :db/doc "where was this query found, taken from?"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task/answer
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "correct answer of the task"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task/answer
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/string
+  :db/doc "correct answer of the task"
+  :db.install/_attribute :db.part/db}
 
-;; Fourfield
+ ;; Fourfield
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task.fourfield/query
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "query of the task"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task/query
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/string
+  :db/doc "query of the task"
+  :db.install/_attribute :db.part/db}
 
 
-;; Fourfield/answer
-{:db/id #db/id[:db.part/db]
- :db/ident :task.fourfield/answer
- :db/cardinality :db.cardinality/many
- :db/valueType :db.type/ref
- :db/doc "pointer to various answers"
- :db.install/_attribute :db.part/db}
+ ;; Fourfield/answer
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task.fourfield/answer
+  :db/cardinality :db.cardinality/many
+  :db/valueType :db.type/ref
+  :db/doc "pointer to various answers"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task.fourfield.answer/weight
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/ref
- :db/doc "The expected position/sorting weight of the answer"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task.fourfield.answer/weight
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/ref
+  :db/doc "The expected position/sorting weight of the answer"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id [:db.part/db]
- :db/ident :task.fourfield.answer/text
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "the answer shown"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id [:db.part/db]
+  :db/ident :task.fourfield.answer/text
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/string
+  :db/doc "the answer shown"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id [:db.part/db]
- :db/ident :task.fourfield.answer/correct
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/boolean
- :db/doc "is the answer correct or not?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id [:db.part/db]
+  :db/ident :task.fourfield.answer/correct
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/boolean
+  :db/doc "is the answer correct or not?"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id [:db.part/db]
- :db/ident :task.fourfield.answer/reason
- :db/cardinality :db.cardinality/many
- :db/valueType :db.type/ref
- :db/doc "some hint to the heuristics what the student made wrong"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id [:db.part/db]
+  :db/ident :task.fourfield.answer/reason
+  :db/cardinality :db.cardinality/many
+  :db/valueType :db.type/ref
+  :db/doc "some hint to the heuristics what the student made wrong"
+  :db.install/_attribute :db.part/db}
 
-;; yes/no
-{:db/id #db/id[:db.part/db]
- :db/ident :task.yesno/query
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "query of the task"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task.yesno/true
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/boolean
+  :db/doc "true or false?"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task.yesno/true
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/boolean
- :db/doc "true or false?"
- :db.install/_attribute :db.part/db}
+ ;; freeform
 
-;; freeform
-{:db/id #db/id[:db.part/db]
- :db/ident :task.freeform/query
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "query of the task"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task.freeform/answer
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/string
+  :db/doc "query of the task"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :task.freeform/answer
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/string
- :db/doc "query of the task"
- :db.install/_attribute :db.part/db}
+ ;; task link,
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task/before
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/ref
+  :db/doc "from task to ..."
+  :db.install/_attribute :db.part/db}
 
-;; task link,
-{:db/id #db/id[:db.part/db]
- :db/ident :task/before
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/ref
- :db/doc "from task to ..."
- :db.install/_attribute :db.part/db}
-
-{:db/id #db/id[:db.part/db]
- :db/ident :task/after
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/ref
- :db/doc "... this task"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :task/after
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/ref
+  :db/doc "... this task"
+  :db.install/_attribute :db.part/db}
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;heuristics
+ ;;heuristics
 
-{:db/id #db/id[:db.part/db]
- :db/ident :heuristics/type
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/boolean
- :db/doc "which heuristics is in use?"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :heuristics/type
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/boolean
+  :db/doc "which heuristics is in use?"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :heuristics/fromtask
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/ref
- :db/doc "after this task ... "
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :heuristics/fromtask
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/ref
+  :db/doc "after this task ... "
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :heuristics/totask
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/ref
- :db/doc "... this task is suitable"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :heuristics/totask
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/ref
+  :db/doc "... this task is suitable"
+  :db.install/_attribute :db.part/db}
 
-{:db/id #db/id[:db.part/db]
- :db/ident :heuristics/strength
- :db/cardinality :db.cardinality/one
- :db/valueType :db.type/double
- :db/doc "with this score/weight"
- :db.install/_attribute :db.part/db}
+ {:db/id #db/id[:db.part/db]
+  :db/ident :heuristics/strength
+  :db/cardinality :db.cardinality/one
+  :db/valueType :db.type/double
+  :db/doc "with this score/weight"
+  :db.install/_attribute :db.part/db}
 
-[:db/add #db/id[:db.part/user] :db/ident :heuristics.type/by-the-book]
-[:db/add #db/id[:db.part/user] :db/ident :heuristics.type/failrate]
-[:db/add #db/id[:db.part/user] :db/ident :heuristics.type/selected-by-users]
 
+ [:db/add #db/id[:db.part/user] :db/ident :heuristics.type/by-the-book]
+ [:db/add #db/id[:db.part/user] :db/ident :heuristics.type/failrate]
+ [:db/add #db/id[:db.part/user] :db/ident :heuristics.type/selected-by-users]
+]

@@ -49,36 +49,6 @@ four different heuristics:
             [mekanikmaskin.logging :as log]
             [clojure.core.async :as async :refer :all]))
 
-;; test in the function definition: greatz
-
-;; http://clojuredocs.org/clojure_core/1.2.0/clojure.core/test
-;;(defn my-function
-;;"this function adds two numbers"
-;;  {:test #(do
-;;         (assert (= (my-function 2 3) 5))
-;;         (assert (= (my-function 4 4) 8)))}
-;; ([x y] (+ x y)))
-;; 	 
-;;(test #'my-function)  ;equal to (test (var my-function))
-;;=> :ok
-;; 	 
-;;(defn my-function
-;;"this function adds two numbers"
-;;{:test #(do
-;;           (assert (= (my-function 2 3) 5))
-;;           (assert (= (my-function 99 4) 8)))}
-;;  ([x y] (+ x y)))
-;; 	 
-;;(test #'my-function)
-;; 	=> java.lang.AssertionError: Assert failed: (= (my-function 99 4) 8) (NO_SOURCE_FILE:0
-
-;;(defn my-function
-;;"this function adds two numbers"
-;;([x y] (+ x y)))
-;; 	 
-;;(test #'my-function)
-;;=> :no-test
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; database connectivity, initialization
 
@@ -92,7 +62,6 @@ four different heuristics:
   [^datomic.peer.LocalConnection conn]
   {:post [(= (type %) java.util.HashSet) (not (zero? (count %)))]}
   (q '[:find ?name :where [_ :user/username ?name]] (db conn)))
-
 
 (defn conditional-connect-db 
   "if there is no database or given :force true
@@ -120,7 +89,6 @@ assert that there are some users availiable"
 ;; be created
 ;; be deleted
 ;; change password
-
 
 (def min-password-length 7)
 
@@ -219,20 +187,6 @@ assert that there are some users availiable"
   (is (valid-answer? [{:id 1}] 1))
   (is (not (valid-answer? [{:id 1} {:id 2}] 3))))
 
-(defn correct-answer? 
-  "selects the answer-id in the answers and checks it's correctness"
-  [answers answer-id]
-  (:correct (first (filter #(= (:id %) answer-id) answers))))
-
-;;this shuld access task as everything else
-(deftest correct-answer?
-  "unvalid answers checked before"
-  (let [answers       [{:id "ans 1" :correct true}]
-        correct-reply "ans 1"
-        wrong-reply   "ans 2"]
-    (is (correct-answer? answers correct-reply))
-    (is (not (correct-answer? answers wrong-reply)))))
-
 (defn answer! 
   "attempts to answer a given exercise from incoming request somehow"
   [student answer-id])
@@ -269,34 +223,33 @@ assert that there are some users availiable"
          [:head 
           [:title "yesno"]]
          [:body 
-          [:h2 (:task.yesno/query task-datom)]
+          [:h2 (:task/query task-datom)]
           [:div "yes"] 
           [:div "no"]]]))
 
 (comment
   (render-task-to-html {:task/type :task.type/yesno
-                        :task.yesno/query "is the sky blue?"}))
+                        :task/query "is the sky blue?"}))
 
 (defn read-answer-text [fourfield-answer-datom]
   (:task.fourfield.answer/text (d/entity (db conn) (:db/id fourfield-answer-datom))))
 
 ;;reads a fourfield and it's datom answers...
 (defmethod render-task-to-html :task.type/fourfield [datom]
-  (let [query-txt (:task.fourfield/query datom)
+  (let [query-txt (:task/query datom)
         [a b c d]  (vec (map read-answer-text (shuffle (take 4 (:task.fourfield/answer datom)))))]
     (four-field-query-to-html query-txt a b c d)))
 
 (comment (render-task-to-html {:task/type :task.type/fourfield
-                               :task.fourfield/query "what is 2+02?"}))
+                               :task/query "what is 2+02?"}))
 
 (defmethod render-task-to-html :task.type/freeform [datom]
   (html [:html [:head [:title "freeform"]]
-         [:body [:h2 (:task.freeform/query datom)]
+         [:body [:h2 (:task/query datom)]
           [:div "_______________________ [OK]"]]]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; score aggregation / select new task
-
 ;; selected from the (ref-)links from the tasks/answers. 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -334,11 +287,6 @@ assert that there are some users availiable"
 (defn login! [request]
   (ring-resp/response "login confirmation placeholder"))
 
-(defn exercise [request]
-  (-> (four-field-query-to-html "what is 2+2?" "1" "2" "3" "4") 
-      ring-resp/response 
-      (ring-resp/content-type "text/html")))
-
 (defn show-the-task 
   "just a way to show of that we can load one single datom and present some attribute of it according to it's :task/type."
   [req]
@@ -359,8 +307,6 @@ assert that there are some users availiable"
         ring-resp/response
         (ring-resp/content-type "text/html"))))
 
-
-
 (definterceptor session-interceptor
   (middlewares/session {:store (cookie/cookie-store)}))
 
@@ -371,8 +317,7 @@ assert that there are some users availiable"
      ["/task/:id" {:get show-the-task}]
      ["/about" {:get about-page}]]
 ;;     ["/login" ^:interceptors [middlewares/params middlewares/keyword-params session-interceptor] {:get login-page :post login!}]
-     
-    ["/exercise" {:get exercise}]]])
+   ]])
 
 (def url-for (route/url-for-routes routes :app-name :mekanikmaskinen))
 
@@ -457,13 +402,13 @@ then (answer 24) answers the number 24"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; testing if something is likely to be a datom
  
-(defn decent-datom?
-  "testing that something seems to be a decent datom, catching it early on"
-  {:test [(decent-datom? {:db/id (d/tempid :db.part/user )})]}
-  [datom]
-  (and 
-   (map? datom)
-   (= (type (:db/id datom)) datomic.db.DbId)))
+;; (defn decent-datom?
+;;   "testing that something seems to be a decent datom, catching it early on"
+;;   {:test [(decent-datom? {:db/id (d/tempid :db.part/user )})]}
+;;   [datom]
+;;   (and 
+;;    (map? datom)
+;;    (= (type (:db/id datom)) datomic.db.DbId)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
  ;; Defining lessions
@@ -492,7 +437,7 @@ then (answer 24) answers the number 24"
 ;; task creation
 
 (defn find-duplicate-fourfield [task-text]
-  (q '[:find ?eid :in $ ?text :where [?eid :task.fourfield/query ?text] ] (db conn) task-text ))
+  (q '[:find ?eid :in $ ?text :where [?eid :task/query ?text] [?eid :task/type :task.type/fourfield] ] (db conn) task-text ))
 
 (defn fourfield-saver 
   "expects the source (string) a text query, the correct answer and at least three non correct answers."
@@ -507,7 +452,7 @@ then (answer 24) answers the number 24"
         (conj 
          {:db/id task-id
           :task/type :task.type/fourfield
-          :task.fourfield/query task-text 
+          :task/query task-text 
           :task/source source
           :task.fourfield/answer (vec (conj other-answers-ids correct-answer-id))})
         (conj 
@@ -566,34 +511,8 @@ then (answer 24) answers the number 24"
   "should spit out a suitable datomic transaction to store this defined lession"
 [name & forms]
   [name forms]
-
-;;this should have a form walk like "get to the list items in forms containing "walkthrough symbol" else check in the lession stack in the database
-;; the 
-
-;; :guessing 10 is an indicator how we should handle guessing - just recover?
 )
 
-(def relation-vector [[:task1 0.9 :statmech]
-                      [:task1 0.5 :math]
-                      [:task2 0.4 :statmech]
-                      [:task3 0.6 :statmech]
-                      [:task3 0.9 :math]
-])
-(q '[:find ?task ?w1 ?w2 :where [?task ?w1 ?subj] [:task3 ?w2 ?subj]] relation-vector)
 
-;;                     [current fail  ok
-(def next-task-vector [[:task1 :task2 :task3]
-                       [:task2 :task4 :task3]
-                       [:task4 :task5 :task6]
-                       [:task3 :task7 :task9]
-                       [:task7 :task10 :task 11]])
 
-(defn create-answer 
-  "returns a datom containing an answer, pointing to the function instanciating it"
-  [^String text ^Boolean correct reasons]
-  {:pre [(coll? reasons)]
-   :post [#(decent-datom? %)]}
- {:db/id (d/tempid :db.part/user)
-  :task.fourfield.answer/correct correct
-  :task.fourfield.answer/reasons reasons
-  :task.fourfield.answer/text text})
+
